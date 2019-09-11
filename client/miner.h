@@ -9,7 +9,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-	
+
 /* a number of mining threads */
 extern int g_xdag_mining_threads;
 
@@ -30,5 +30,5 @@ extern int xdag_pick_pool(char *pool_address);
 #ifdef __cplusplus
 };
 #endif
-		
+
 #endif

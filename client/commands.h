@@ -4,7 +4,7 @@
 #include <time.h>
 #include "block.h"
 
-#define XDAG_COMMAND_MAX	0x1000
+#define XDAG_COMMAND_MAX 0x1000
 
 #ifdef __cplusplus
 extern "C" {
@@ -22,15 +22,15 @@ extern const char *get_state(void);
 };
 #endif
 
-#define XFER_MAX_IN				11
+#define XFER_MAX_IN 11
 
 struct xfer_callback_data {
-	struct xdag_field fields[XFER_MAX_IN + 1];
-	int keys[XFER_MAX_IN + 1];
-	xdag_amount_t todo, done, remains;
-	int fieldsCount, keysCount, outsig, hasRemark;
-	xdag_hash_t transactionBlockHash;
-	xdag_remark_t remark;
+    struct xdag_field fields[XFER_MAX_IN + 1];
+    int keys[XFER_MAX_IN + 1];
+    xdag_amount_t todo, done, remains;
+    int fieldsCount, keysCount, outsig, hasRemark;
+    xdag_hash_t transactionBlockHash;
+    xdag_remark_t remark;
 };
 
 void startCommandProcessing(int transportFlags);
@@ -41,7 +41,7 @@ int xdag_show_state(xdag_hash_t hash);
 
 int xfer_callback(void *data, xdag_hash_t hash, xdag_amount_t amount, xtime_t time, int n_our_key);
 
-int read_command(char* cmd);
+int read_command(char *cmd);
 
 void xdag_init_commands(void);
 

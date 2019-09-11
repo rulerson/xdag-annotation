@@ -12,13 +12,13 @@
 #include <stdint.h>
 
 #ifdef __DuS__
-typedef uint16_t	dfsrsa_t;
-typedef uint32_t	dfsrsa_long_t;
-typedef int32_t		dfsrsa_slong_t;
+typedef uint16_t dfsrsa_t;
+typedef uint32_t dfsrsa_long_t;
+typedef int32_t dfsrsa_slong_t;
 #else
-typedef uint32_t	dfsrsa_t;
-typedef uint64_t	dfsrsa_long_t;
-typedef int64_t		dfsrsa_slong_t;
+typedef uint32_t dfsrsa_t;
+typedef uint64_t dfsrsa_long_t;
+typedef int64_t dfsrsa_slong_t;
 #endif
 
 // generates public and private keys of the lengh `keylen` of numbers dfsrsa_t

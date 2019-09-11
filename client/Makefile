@@ -151,7 +151,7 @@ endif
 all: secp256k1 xdag
 
 xdag: $(sources) $(headers) Makefile
-	cc -o xdag $(secp256k1_i) $(sources) $(asm_src) -DSHA256_USE_OPENSSL_TXFM -DSHA256_OPENSSL_MBLOCK -I$(SRCROOT) -I$(utils) $(flags)
+	cc -o xdag $(secp256k1_i) $(sources) $(asm_src) -DSHA256_USE_OPENSSL_TXFM -DSHA256_OPENSSL_MBLOCK -I$(SRCROOT) -I$(utils) $(flags) -I/usr/local/Cellar/openssl/1.0.2q/include -L/usr/local/Cellar/openssl/1.0.2q/lib
 
 secp256k1:
 ifneq ($(OS), Darwin)

@@ -23,29 +23,34 @@
 #include "openssl/ec.h"
 #include "openssl/ecdsa.h"
 #include "openssl/obj_mac.h"
-# if OPENSSL_VERSION_NUMBER < 0x10100000L
-void ECDSA_SIG_get0(const ECDSA_SIG *sig, const BIGNUM **pr, const BIGNUM **ps) {*pr = sig->r; *ps = sig->s;}
-# endif
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+void ECDSA_SIG_get0(const ECDSA_SIG *sig, const BIGNUM **pr, const BIGNUM **ps)
+{
+    *pr = sig->r;
+    *ps = sig->s;
+}
+#endif
 #endif
 
 #include "contrib/lax_der_parsing.c"
 #include "contrib/lax_der_privatekey_parsing.c"
 
 #if !defined(VG_CHECK)
-# if defined(VALGRIND)
-#  include <valgrind/memcheck.h>
-#  define VG_UNDEF(x,y) VALGRIND_MAKE_MEM_UNDEFINED((x),(y))
-#  define VG_CHECK(x,y) VALGRIND_CHECK_MEM_IS_DEFINED((x),(y))
-# else
-#  define VG_UNDEF(x,y)
-#  define VG_CHECK(x,y)
-# endif
+#if defined(VALGRIND)
+#include <valgrind/memcheck.h>
+#define VG_UNDEF(x, y) VALGRIND_MAKE_MEM_UNDEFINED((x), (y))
+#define VG_CHECK(x, y) VALGRIND_CHECK_MEM_IS_DEFINED((x), (y))
+#else
+#define VG_UNDEF(x, y)
+#define VG_CHECK(x, y)
+#endif
 #endif
 
 static int count = 64;
 static secp256k1_context *ctx = NULL;
 
-static void counting_illegal_callback_fn(const char* str, void* data) {
+static void counting_illegal_callback_fn(const char *str, void *data)
+{
     /* Dummy callback function that just counts. */
     int32_t *p;
     (void)str;
@@ -53,7 +58,8 @@ static void counting_illegal_callback_fn(const char* str, void* data) {
     (*p)++;
 }
 
-static void uncounting_illegal_callback_fn(const char* str, void* data) {
+static void uncounting_illegal_callback_fn(const char *str, void *data)
+{
     /* Dummy callback function that just counts (backwards). */
     int32_t *p;
     (void)str;
@@ -61,17 +67,19 @@ static void uncounting_illegal_callback_fn(const char* str, void* data) {
     (*p)--;
 }
 
-void random_field_element_test(secp256k1_fe *fe) {
+void random_field_element_test(secp256k1_fe *fe)
+{
     do {
         unsigned char b32[32];
         secp256k1_rand256_test(b32);
         if (secp256k1_fe_set_b32(fe, b32)) {
             break;
         }
-    } while(1);
+    } while (1);
 }
 
-void random_field_element_magnitude(secp256k1_fe *fe) {
+void random_field_element_magnitude(secp256k1_fe *fe)
+{
     secp256k1_fe zero;
     int n = secp256k1_rand_int(9);
     secp256k1_fe_normalize(fe);
@@ -85,7 +93,8 @@ void random_field_element_magnitude(secp256k1_fe *fe) {
     VERIFY_CHECK(fe->magnitude == n);
 }
 
-void random_group_element_test(secp256k1_ge *ge) {
+void random_group_element_test(secp256k1_ge *ge)
+{
     secp256k1_fe fe;
     do {
         random_field_element_test(&fe);
@@ -93,17 +102,18 @@ void random_group_element_test(secp256k1_ge *ge) {
             secp256k1_fe_normalize(&ge->y);
             break;
         }
-    } while(1);
+    } while (1);
 }
 
-void random_group_element_jacobian_test(secp256k1_gej *gej, const secp256k1_ge *ge) {
+void random_group_element_jacobian_test(secp256k1_gej *gej, const secp256k1_ge *ge)
+{
     secp256k1_fe z2, z3;
     do {
         random_field_element_test(&gej->z);
         if (!secp256k1_fe_is_zero(&gej->z)) {
             break;
         }
-    } while(1);
+    } while (1);
     secp256k1_fe_sqr(&z2, &gej->z);
     secp256k1_fe_mul(&z3, &z2, &gej->z);
     secp256k1_fe_mul(&gej->x, &ge->x, &z2);
@@ -111,7 +121,8 @@ void random_group_element_jacobian_test(secp256k1_gej *gej, const secp256k1_ge *
     gej->infinity = ge->infinity;
 }
 
-void random_scalar_order_test(secp256k1_scalar *num) {
+void random_scalar_order_test(secp256k1_scalar *num)
+{
     do {
         unsigned char b32[32];
         int overflow = 0;
@@ -121,10 +132,11 @@ void random_scalar_order_test(secp256k1_scalar *num) {
             continue;
         }
         break;
-    } while(1);
+    } while (1);
 }
 
-void random_scalar_order(secp256k1_scalar *num) {
+void random_scalar_order(secp256k1_scalar *num)
+{
     do {
         unsigned char b32[32];
         int overflow = 0;
@@ -134,10 +146,11 @@ void random_scalar_order(secp256k1_scalar *num) {
             continue;
         }
         break;
-    } while(1);
+    } while (1);
 }
 
-void run_context_tests(void) {
+void run_context_tests(void)
+{
     secp256k1_pubkey pubkey;
     secp256k1_pubkey zero_pubkey;
     secp256k1_ecdsa_signature sig;
@@ -167,10 +180,18 @@ void run_context_tests(void) {
     {
         secp256k1_context *ctx_tmp;
 
-        ctx_tmp = none; none = secp256k1_context_clone(none); secp256k1_context_destroy(ctx_tmp);
-        ctx_tmp = sign; sign = secp256k1_context_clone(sign); secp256k1_context_destroy(ctx_tmp);
-        ctx_tmp = vrfy; vrfy = secp256k1_context_clone(vrfy); secp256k1_context_destroy(ctx_tmp);
-        ctx_tmp = both; both = secp256k1_context_clone(both); secp256k1_context_destroy(ctx_tmp);
+        ctx_tmp = none;
+        none = secp256k1_context_clone(none);
+        secp256k1_context_destroy(ctx_tmp);
+        ctx_tmp = sign;
+        sign = secp256k1_context_clone(sign);
+        secp256k1_context_destroy(ctx_tmp);
+        ctx_tmp = vrfy;
+        vrfy = secp256k1_context_clone(vrfy);
+        secp256k1_context_destroy(ctx_tmp);
+        ctx_tmp = both;
+        both = secp256k1_context_clone(both);
+        secp256k1_context_destroy(ctx_tmp);
     }
 
     /* Verify that the error callback makes it across the clone. */
@@ -232,7 +253,7 @@ void run_context_tests(void) {
     /* obtain a working nonce */
     do {
         random_scalar_order_test(&nonce);
-    } while(!secp256k1_ecdsa_sig_sign(&both->ecmult_gen_ctx, &sigr, &sigs, &key, &msg, &nonce, NULL));
+    } while (!secp256k1_ecdsa_sig_sign(&both->ecmult_gen_ctx, &sigr, &sigs, &key, &msg, &nonce, NULL));
 
     /* try signing */
     CHECK(secp256k1_ecdsa_sig_sign(&sign->ecmult_gen_ctx, &sigr, &sigs, &key, &msg, &nonce, NULL));
@@ -251,7 +272,8 @@ void run_context_tests(void) {
     secp256k1_context_destroy(NULL);
 }
 
-void run_scratch_tests(void) {
+void run_scratch_tests(void)
+{
     int32_t ecount = 0;
     secp256k1_context *none = secp256k1_context_create(SECP256K1_CONTEXT_NONE);
     secp256k1_scratch_space *scratch;
@@ -291,13 +313,13 @@ void run_scratch_tests(void) {
 
 /***** HASH TESTS *****/
 
-void run_sha256_tests(void) {
+void run_sha256_tests(void)
+{
     static const char *inputs[8] = {
         "", "abc", "message digest", "secure hash algorithm", "SHA256 is considered to be safe",
         "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq",
         "For this sample, this 63-byte string will be used as input data",
-        "This is exactly 64 bytes long, not counting the terminating byte"
-    };
+        "This is exactly 64 bytes long, not counting the terminating byte"};
     static const unsigned char outputs[8][32] = {
         {0xe3, 0xb0, 0xc4, 0x42, 0x98, 0xfc, 0x1c, 0x14, 0x9a, 0xfb, 0xf4, 0xc8, 0x99, 0x6f, 0xb9, 0x24, 0x27, 0xae, 0x41, 0xe4, 0x64, 0x9b, 0x93, 0x4c, 0xa4, 0x95, 0x99, 0x1b, 0x78, 0x52, 0xb8, 0x55},
         {0xba, 0x78, 0x16, 0xbf, 0x8f, 0x01, 0xcf, 0xea, 0x41, 0x41, 0x40, 0xde, 0x5d, 0xae, 0x22, 0x23, 0xb0, 0x03, 0x61, 0xa3, 0x96, 0x17, 0x7a, 0x9c, 0xb4, 0x10, 0xff, 0x61, 0xf2, 0x00, 0x15, 0xad},
@@ -306,85 +328,81 @@ void run_sha256_tests(void) {
         {0x68, 0x19, 0xd9, 0x15, 0xc7, 0x3f, 0x4d, 0x1e, 0x77, 0xe4, 0xe1, 0xb5, 0x2d, 0x1f, 0xa0, 0xf9, 0xcf, 0x9b, 0xea, 0xea, 0xd3, 0x93, 0x9f, 0x15, 0x87, 0x4b, 0xd9, 0x88, 0xe2, 0xa2, 0x36, 0x30},
         {0x24, 0x8d, 0x6a, 0x61, 0xd2, 0x06, 0x38, 0xb8, 0xe5, 0xc0, 0x26, 0x93, 0x0c, 0x3e, 0x60, 0x39, 0xa3, 0x3c, 0xe4, 0x59, 0x64, 0xff, 0x21, 0x67, 0xf6, 0xec, 0xed, 0xd4, 0x19, 0xdb, 0x06, 0xc1},
         {0xf0, 0x8a, 0x78, 0xcb, 0xba, 0xee, 0x08, 0x2b, 0x05, 0x2a, 0xe0, 0x70, 0x8f, 0x32, 0xfa, 0x1e, 0x50, 0xc5, 0xc4, 0x21, 0xaa, 0x77, 0x2b, 0xa5, 0xdb, 0xb4, 0x06, 0xa2, 0xea, 0x6b, 0xe3, 0x42},
-        {0xab, 0x64, 0xef, 0xf7, 0xe8, 0x8e, 0x2e, 0x46, 0x16, 0x5e, 0x29, 0xf2, 0xbc, 0xe4, 0x18, 0x26, 0xbd, 0x4c, 0x7b, 0x35, 0x52, 0xf6, 0xb3, 0x82, 0xa9, 0xe7, 0xd3, 0xaf, 0x47, 0xc2, 0x45, 0xf8}
-    };
+        {0xab, 0x64, 0xef, 0xf7, 0xe8, 0x8e, 0x2e, 0x46, 0x16, 0x5e, 0x29, 0xf2, 0xbc, 0xe4, 0x18, 0x26, 0xbd, 0x4c, 0x7b, 0x35, 0x52, 0xf6, 0xb3, 0x82, 0xa9, 0xe7, 0xd3, 0xaf, 0x47, 0xc2, 0x45, 0xf8}};
     int i;
     for (i = 0; i < 8; i++) {
         unsigned char out[32];
         secp256k1_sha256 hasher;
         secp256k1_sha256_initialize(&hasher);
-        secp256k1_sha256_write(&hasher, (const unsigned char*)(inputs[i]), strlen(inputs[i]));
+        secp256k1_sha256_write(&hasher, (const unsigned char *)(inputs[i]), strlen(inputs[i]));
         secp256k1_sha256_finalize(&hasher, out);
         CHECK(memcmp(out, outputs[i], 32) == 0);
         if (strlen(inputs[i]) > 0) {
             int split = secp256k1_rand_int(strlen(inputs[i]));
             secp256k1_sha256_initialize(&hasher);
-            secp256k1_sha256_write(&hasher, (const unsigned char*)(inputs[i]), split);
-            secp256k1_sha256_write(&hasher, (const unsigned char*)(inputs[i] + split), strlen(inputs[i]) - split);
+            secp256k1_sha256_write(&hasher, (const unsigned char *)(inputs[i]), split);
+            secp256k1_sha256_write(&hasher, (const unsigned char *)(inputs[i] + split), strlen(inputs[i]) - split);
             secp256k1_sha256_finalize(&hasher, out);
             CHECK(memcmp(out, outputs[i], 32) == 0);
         }
     }
 }
 
-void run_hmac_sha256_tests(void) {
+void run_hmac_sha256_tests(void)
+{
     static const char *keys[6] = {
         "\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b",
         "\x4a\x65\x66\x65",
         "\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa",
         "\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19",
         "\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa",
-        "\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa"
-    };
+        "\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa"};
     static const char *inputs[6] = {
         "\x48\x69\x20\x54\x68\x65\x72\x65",
         "\x77\x68\x61\x74\x20\x64\x6f\x20\x79\x61\x20\x77\x61\x6e\x74\x20\x66\x6f\x72\x20\x6e\x6f\x74\x68\x69\x6e\x67\x3f",
         "\xdd\xdd\xdd\xdd\xdd\xdd\xdd\xdd\xdd\xdd\xdd\xdd\xdd\xdd\xdd\xdd\xdd\xdd\xdd\xdd\xdd\xdd\xdd\xdd\xdd\xdd\xdd\xdd\xdd\xdd\xdd\xdd\xdd\xdd\xdd\xdd\xdd\xdd\xdd\xdd\xdd\xdd\xdd\xdd\xdd\xdd\xdd\xdd\xdd\xdd",
         "\xcd\xcd\xcd\xcd\xcd\xcd\xcd\xcd\xcd\xcd\xcd\xcd\xcd\xcd\xcd\xcd\xcd\xcd\xcd\xcd\xcd\xcd\xcd\xcd\xcd\xcd\xcd\xcd\xcd\xcd\xcd\xcd\xcd\xcd\xcd\xcd\xcd\xcd\xcd\xcd\xcd\xcd\xcd\xcd\xcd\xcd\xcd\xcd\xcd\xcd",
         "\x54\x65\x73\x74\x20\x55\x73\x69\x6e\x67\x20\x4c\x61\x72\x67\x65\x72\x20\x54\x68\x61\x6e\x20\x42\x6c\x6f\x63\x6b\x2d\x53\x69\x7a\x65\x20\x4b\x65\x79\x20\x2d\x20\x48\x61\x73\x68\x20\x4b\x65\x79\x20\x46\x69\x72\x73\x74",
-        "\x54\x68\x69\x73\x20\x69\x73\x20\x61\x20\x74\x65\x73\x74\x20\x75\x73\x69\x6e\x67\x20\x61\x20\x6c\x61\x72\x67\x65\x72\x20\x74\x68\x61\x6e\x20\x62\x6c\x6f\x63\x6b\x2d\x73\x69\x7a\x65\x20\x6b\x65\x79\x20\x61\x6e\x64\x20\x61\x20\x6c\x61\x72\x67\x65\x72\x20\x74\x68\x61\x6e\x20\x62\x6c\x6f\x63\x6b\x2d\x73\x69\x7a\x65\x20\x64\x61\x74\x61\x2e\x20\x54\x68\x65\x20\x6b\x65\x79\x20\x6e\x65\x65\x64\x73\x20\x74\x6f\x20\x62\x65\x20\x68\x61\x73\x68\x65\x64\x20\x62\x65\x66\x6f\x72\x65\x20\x62\x65\x69\x6e\x67\x20\x75\x73\x65\x64\x20\x62\x79\x20\x74\x68\x65\x20\x48\x4d\x41\x43\x20\x61\x6c\x67\x6f\x72\x69\x74\x68\x6d\x2e"
-    };
+        "\x54\x68\x69\x73\x20\x69\x73\x20\x61\x20\x74\x65\x73\x74\x20\x75\x73\x69\x6e\x67\x20\x61\x20\x6c\x61\x72\x67\x65\x72\x20\x74\x68\x61\x6e\x20\x62\x6c\x6f\x63\x6b\x2d\x73\x69\x7a\x65\x20\x6b\x65\x79\x20\x61\x6e\x64\x20\x61\x20\x6c\x61\x72\x67\x65\x72\x20\x74\x68\x61\x6e\x20\x62\x6c\x6f\x63\x6b\x2d\x73\x69\x7a\x65\x20\x64\x61\x74\x61\x2e\x20\x54\x68\x65\x20\x6b\x65\x79\x20\x6e\x65\x65\x64\x73\x20\x74\x6f\x20\x62\x65\x20\x68\x61\x73\x68\x65\x64\x20\x62\x65\x66\x6f\x72\x65\x20\x62\x65\x69\x6e\x67\x20\x75\x73\x65\x64\x20\x62\x79\x20\x74\x68\x65\x20\x48\x4d\x41\x43\x20\x61\x6c\x67\x6f\x72\x69\x74\x68\x6d\x2e"};
     static const unsigned char outputs[6][32] = {
         {0xb0, 0x34, 0x4c, 0x61, 0xd8, 0xdb, 0x38, 0x53, 0x5c, 0xa8, 0xaf, 0xce, 0xaf, 0x0b, 0xf1, 0x2b, 0x88, 0x1d, 0xc2, 0x00, 0xc9, 0x83, 0x3d, 0xa7, 0x26, 0xe9, 0x37, 0x6c, 0x2e, 0x32, 0xcf, 0xf7},
         {0x5b, 0xdc, 0xc1, 0x46, 0xbf, 0x60, 0x75, 0x4e, 0x6a, 0x04, 0x24, 0x26, 0x08, 0x95, 0x75, 0xc7, 0x5a, 0x00, 0x3f, 0x08, 0x9d, 0x27, 0x39, 0x83, 0x9d, 0xec, 0x58, 0xb9, 0x64, 0xec, 0x38, 0x43},
         {0x77, 0x3e, 0xa9, 0x1e, 0x36, 0x80, 0x0e, 0x46, 0x85, 0x4d, 0xb8, 0xeb, 0xd0, 0x91, 0x81, 0xa7, 0x29, 0x59, 0x09, 0x8b, 0x3e, 0xf8, 0xc1, 0x22, 0xd9, 0x63, 0x55, 0x14, 0xce, 0xd5, 0x65, 0xfe},
         {0x82, 0x55, 0x8a, 0x38, 0x9a, 0x44, 0x3c, 0x0e, 0xa4, 0xcc, 0x81, 0x98, 0x99, 0xf2, 0x08, 0x3a, 0x85, 0xf0, 0xfa, 0xa3, 0xe5, 0x78, 0xf8, 0x07, 0x7a, 0x2e, 0x3f, 0xf4, 0x67, 0x29, 0x66, 0x5b},
         {0x60, 0xe4, 0x31, 0x59, 0x1e, 0xe0, 0xb6, 0x7f, 0x0d, 0x8a, 0x26, 0xaa, 0xcb, 0xf5, 0xb7, 0x7f, 0x8e, 0x0b, 0xc6, 0x21, 0x37, 0x28, 0xc5, 0x14, 0x05, 0x46, 0x04, 0x0f, 0x0e, 0xe3, 0x7f, 0x54},
-        {0x9b, 0x09, 0xff, 0xa7, 0x1b, 0x94, 0x2f, 0xcb, 0x27, 0x63, 0x5f, 0xbc, 0xd5, 0xb0, 0xe9, 0x44, 0xbf, 0xdc, 0x63, 0x64, 0x4f, 0x07, 0x13, 0x93, 0x8a, 0x7f, 0x51, 0x53, 0x5c, 0x3a, 0x35, 0xe2}
-    };
+        {0x9b, 0x09, 0xff, 0xa7, 0x1b, 0x94, 0x2f, 0xcb, 0x27, 0x63, 0x5f, 0xbc, 0xd5, 0xb0, 0xe9, 0x44, 0xbf, 0xdc, 0x63, 0x64, 0x4f, 0x07, 0x13, 0x93, 0x8a, 0x7f, 0x51, 0x53, 0x5c, 0x3a, 0x35, 0xe2}};
     int i;
     for (i = 0; i < 6; i++) {
         secp256k1_hmac_sha256 hasher;
         unsigned char out[32];
-        secp256k1_hmac_sha256_initialize(&hasher, (const unsigned char*)(keys[i]), strlen(keys[i]));
-        secp256k1_hmac_sha256_write(&hasher, (const unsigned char*)(inputs[i]), strlen(inputs[i]));
+        secp256k1_hmac_sha256_initialize(&hasher, (const unsigned char *)(keys[i]), strlen(keys[i]));
+        secp256k1_hmac_sha256_write(&hasher, (const unsigned char *)(inputs[i]), strlen(inputs[i]));
         secp256k1_hmac_sha256_finalize(&hasher, out);
         CHECK(memcmp(out, outputs[i], 32) == 0);
         if (strlen(inputs[i]) > 0) {
             int split = secp256k1_rand_int(strlen(inputs[i]));
-            secp256k1_hmac_sha256_initialize(&hasher, (const unsigned char*)(keys[i]), strlen(keys[i]));
-            secp256k1_hmac_sha256_write(&hasher, (const unsigned char*)(inputs[i]), split);
-            secp256k1_hmac_sha256_write(&hasher, (const unsigned char*)(inputs[i] + split), strlen(inputs[i]) - split);
+            secp256k1_hmac_sha256_initialize(&hasher, (const unsigned char *)(keys[i]), strlen(keys[i]));
+            secp256k1_hmac_sha256_write(&hasher, (const unsigned char *)(inputs[i]), split);
+            secp256k1_hmac_sha256_write(&hasher, (const unsigned char *)(inputs[i] + split), strlen(inputs[i]) - split);
             secp256k1_hmac_sha256_finalize(&hasher, out);
             CHECK(memcmp(out, outputs[i], 32) == 0);
         }
     }
 }
 
-void run_rfc6979_hmac_sha256_tests(void) {
+void run_rfc6979_hmac_sha256_tests(void)
+{
     static const unsigned char key1[65] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 0x00, 0x4b, 0xf5, 0x12, 0x2f, 0x34, 0x45, 0x54, 0xc5, 0x3b, 0xde, 0x2e, 0xbb, 0x8c, 0xd2, 0xb7, 0xe3, 0xd1, 0x60, 0x0a, 0xd6, 0x31, 0xc3, 0x85, 0xa5, 0xd7, 0xcc, 0xe2, 0x3c, 0x77, 0x85, 0x45, 0x9a, 0};
     static const unsigned char out1[3][32] = {
         {0x4f, 0xe2, 0x95, 0x25, 0xb2, 0x08, 0x68, 0x09, 0x15, 0x9a, 0xcd, 0xf0, 0x50, 0x6e, 0xfb, 0x86, 0xb0, 0xec, 0x93, 0x2c, 0x7b, 0xa4, 0x42, 0x56, 0xab, 0x32, 0x1e, 0x42, 0x1e, 0x67, 0xe9, 0xfb},
         {0x2b, 0xf0, 0xff, 0xf1, 0xd3, 0xc3, 0x78, 0xa2, 0x2d, 0xc5, 0xde, 0x1d, 0x85, 0x65, 0x22, 0x32, 0x5c, 0x65, 0xb5, 0x04, 0x49, 0x1a, 0x0c, 0xbd, 0x01, 0xcb, 0x8f, 0x3a, 0xa6, 0x7f, 0xfd, 0x4a},
-        {0xf5, 0x28, 0xb4, 0x10, 0xcb, 0x54, 0x1f, 0x77, 0x00, 0x0d, 0x7a, 0xfb, 0x6c, 0x5b, 0x53, 0xc5, 0xc4, 0x71, 0xea, 0xb4, 0x3e, 0x46, 0x6d, 0x9a, 0xc5, 0x19, 0x0c, 0x39, 0xc8, 0x2f, 0xd8, 0x2e}
-    };
+        {0xf5, 0x28, 0xb4, 0x10, 0xcb, 0x54, 0x1f, 0x77, 0x00, 0x0d, 0x7a, 0xfb, 0x6c, 0x5b, 0x53, 0xc5, 0xc4, 0x71, 0xea, 0xb4, 0x3e, 0x46, 0x6d, 0x9a, 0xc5, 0x19, 0x0c, 0x39, 0xc8, 0x2f, 0xd8, 0x2e}};
 
     static const unsigned char key2[64] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xe3, 0xb0, 0xc4, 0x42, 0x98, 0xfc, 0x1c, 0x14, 0x9a, 0xfb, 0xf4, 0xc8, 0x99, 0x6f, 0xb9, 0x24, 0x27, 0xae, 0x41, 0xe4, 0x64, 0x9b, 0x93, 0x4c, 0xa4, 0x95, 0x99, 0x1b, 0x78, 0x52, 0xb8, 0x55};
     static const unsigned char out2[3][32] = {
         {0x9c, 0x23, 0x6c, 0x16, 0x5b, 0x82, 0xae, 0x0c, 0xd5, 0x90, 0x65, 0x9e, 0x10, 0x0b, 0x6b, 0xab, 0x30, 0x36, 0xe7, 0xba, 0x8b, 0x06, 0x74, 0x9b, 0xaf, 0x69, 0x81, 0xe1, 0x6f, 0x1a, 0x2b, 0x95},
         {0xdf, 0x47, 0x10, 0x61, 0x62, 0x5b, 0xc0, 0xea, 0x14, 0xb6, 0x82, 0xfe, 0xee, 0x2c, 0x9c, 0x02, 0xf2, 0x35, 0xda, 0x04, 0x20, 0x4c, 0x1d, 0x62, 0xa1, 0x53, 0x6c, 0x6e, 0x17, 0xae, 0xd7, 0xa9},
-        {0x75, 0x97, 0x88, 0x7c, 0xbd, 0x76, 0x32, 0x1f, 0x32, 0xe3, 0x04, 0x40, 0x67, 0x9a, 0x22, 0xcf, 0x7f, 0x8d, 0x9d, 0x2e, 0xac, 0x39, 0x0e, 0x58, 0x1f, 0xea, 0x09, 0x1c, 0xe2, 0x02, 0xba, 0x94}
-    };
+        {0x75, 0x97, 0x88, 0x7c, 0xbd, 0x76, 0x32, 0x1f, 0x32, 0xe3, 0x04, 0x40, 0x67, 0x9a, 0x22, 0xcf, 0x7f, 0x8d, 0x9d, 0x2e, 0xac, 0x39, 0x0e, 0x58, 0x1f, 0xea, 0x09, 0x1c, 0xe2, 0x02, 0xba, 0x94}};
 
     secp256k1_rfc6979_hmac_sha256 rng;
     unsigned char out[32];
@@ -414,7 +432,8 @@ void run_rfc6979_hmac_sha256_tests(void) {
 
 /***** RANDOM TESTS *****/
 
-void test_rand_bits(int rand32, int bits) {
+void test_rand_bits(int rand32, int bits)
+{
     /* (1-1/2^B)^rounds[B] < 1/10^9, so rounds is the number of iterations to
      * get a false negative chance below once in a billion */
     static const unsigned int rounds[7] = {1, 30, 73, 156, 322, 653, 1316};
@@ -449,7 +468,8 @@ void test_rand_bits(int rand32, int bits) {
 }
 
 /* Subrange must be a whole divisor of range, and at most 64 */
-void test_rand_int(uint32_t range, uint32_t subrange) {
+void test_rand_int(uint32_t range, uint32_t subrange)
+{
     /* (1-1/subrange)^rounds < 1/10^9 */
     int rounds = (subrange * 2073) / 100;
     int i;
@@ -465,7 +485,8 @@ void test_rand_int(uint32_t range, uint32_t subrange) {
     CHECK(((~x) << (64 - subrange)) == 0);
 }
 
-void run_rand_bits(void) {
+void run_rand_bits(void)
+{
     size_t b;
     test_rand_bits(1, 32);
     for (b = 1; b <= 32; b++) {
@@ -473,7 +494,8 @@ void run_rand_bits(void) {
     }
 }
 
-void run_rand_int(void) {
+void run_rand_int(void)
+{
     static const uint32_t ms[] = {1, 3, 17, 1000, 13771, 999999, 33554432};
     static const uint32_t ss[] = {1, 3, 6, 9, 13, 31, 64};
     unsigned int m, s;
@@ -487,45 +509,50 @@ void run_rand_int(void) {
 /***** NUM TESTS *****/
 
 #ifndef USE_NUM_NONE
-void random_num_negate(secp256k1_num *num) {
+void random_num_negate(secp256k1_num *num)
+{
     if (secp256k1_rand_bits(1)) {
         secp256k1_num_negate(num);
     }
 }
 
-void random_num_order_test(secp256k1_num *num) {
+void random_num_order_test(secp256k1_num *num)
+{
     secp256k1_scalar sc;
     random_scalar_order_test(&sc);
     secp256k1_scalar_get_num(num, &sc);
 }
 
-void random_num_order(secp256k1_num *num) {
+void random_num_order(secp256k1_num *num)
+{
     secp256k1_scalar sc;
     random_scalar_order(&sc);
     secp256k1_scalar_get_num(num, &sc);
 }
 
-void test_num_negate(void) {
+void test_num_negate(void)
+{
     secp256k1_num n1;
     secp256k1_num n2;
     random_num_order_test(&n1); /* n1 = R */
     random_num_negate(&n1);
-    secp256k1_num_copy(&n2, &n1); /* n2 = R */
+    secp256k1_num_copy(&n2, &n1);     /* n2 = R */
     secp256k1_num_sub(&n1, &n2, &n1); /* n1 = n2-n1 = 0 */
     CHECK(secp256k1_num_is_zero(&n1));
     secp256k1_num_copy(&n1, &n2); /* n1 = R */
-    secp256k1_num_negate(&n1); /* n1 = -R */
+    secp256k1_num_negate(&n1);    /* n1 = -R */
     CHECK(!secp256k1_num_is_zero(&n1));
     secp256k1_num_add(&n1, &n2, &n1); /* n1 = n2+n1 = 0 */
     CHECK(secp256k1_num_is_zero(&n1));
     secp256k1_num_copy(&n1, &n2); /* n1 = R */
-    secp256k1_num_negate(&n1); /* n1 = -R */
+    secp256k1_num_negate(&n1);    /* n1 = -R */
     CHECK(secp256k1_num_is_neg(&n1) != secp256k1_num_is_neg(&n2));
     secp256k1_num_negate(&n1); /* n1 = R */
     CHECK(secp256k1_num_eq(&n1, &n2));
 }
 
-void test_num_add_sub(void) {
+void test_num_add_sub(void)
+{
     int i;
     secp256k1_scalar s;
     secp256k1_num n1;
@@ -561,13 +588,14 @@ void test_num_add_sub(void) {
     /* check that 2^n + 1 is never 1 */
     secp256k1_scalar_get_num(&n2, &s);
     for (i = 0; i < 250; ++i) {
-        secp256k1_num_add(&n1, &n1, &n1);    /* n1 *= 2 */
-        secp256k1_num_add(&n1p2, &n1, &n2);  /* n1p2 = n1 + 1 */
+        secp256k1_num_add(&n1, &n1, &n1);   /* n1 *= 2 */
+        secp256k1_num_add(&n1p2, &n1, &n2); /* n1p2 = n1 + 1 */
         CHECK(!secp256k1_num_is_one(&n1p2));
     }
 }
 
-void test_num_mod(void) {
+void test_num_mod(void)
+{
     int i;
     secp256k1_scalar s;
     secp256k1_num order, n;
@@ -598,14 +626,15 @@ void test_num_mod(void) {
     CHECK(secp256k1_num_is_zero(&n));
 }
 
-void test_num_jacobi(void) {
+void test_num_jacobi(void)
+{
     secp256k1_scalar sqr;
     secp256k1_scalar small;
-    secp256k1_scalar five;  /* five is not a quadratic residue */
+    secp256k1_scalar five; /* five is not a quadratic residue */
     secp256k1_num order, n;
     int i;
     /* squares mod 5 are 1, 4 */
-    const int jacobi5[10] = { 0, 1, -1, -1, 1, 0, 1, -1, -1, 1 };
+    const int jacobi5[10] = {0, 1, -1, -1, 1, 0, 1, -1, -1, 1};
 
     /* check some small values with 5 as the order */
     secp256k1_scalar_set_int(&five, 5);
@@ -656,12 +685,13 @@ void test_num_jacobi(void) {
     secp256k1_scalar_set_int(&small, 1);
     secp256k1_scalar_get_num(&n, &small);
     secp256k1_num_sub(&n, &order, &n);
-    CHECK(secp256k1_num_jacobi(&n, &order) == 1);  /* sage confirms this is 1 */
+    CHECK(secp256k1_num_jacobi(&n, &order) == 1); /* sage confirms this is 1 */
 }
 
-void run_num_smalltests(void) {
+void run_num_smalltests(void)
+{
     int i;
-    for (i = 0; i < 100*count; i++) {
+    for (i = 0; i < 100 * count; i++) {
         test_num_negate();
         test_num_add_sub();
         test_num_mod();
@@ -672,7 +702,8 @@ void run_num_smalltests(void) {
 
 /***** SCALAR TESTS *****/
 
-void scalar_test(void) {
+void scalar_test(void)
+{
     secp256k1_scalar s;
     secp256k1_scalar s1;
     secp256k1_scalar s2;
@@ -938,7 +969,7 @@ void scalar_test(void) {
     {
         /* Test multiplicative identity. */
         secp256k1_scalar r1, v1;
-        secp256k1_scalar_set_int(&v1,1);
+        secp256k1_scalar_set_int(&v1, 1);
         secp256k1_scalar_mul(&r1, &s1, &v1);
         CHECK(secp256k1_scalar_eq(&r1, &s1));
     }
@@ -946,7 +977,7 @@ void scalar_test(void) {
     {
         /* Test additive identity. */
         secp256k1_scalar r1, v0;
-        secp256k1_scalar_set_int(&v0,0);
+        secp256k1_scalar_set_int(&v0, 0);
         secp256k1_scalar_add(&r1, &s1, &v0);
         CHECK(secp256k1_scalar_eq(&r1, &s1));
     }
@@ -954,14 +985,14 @@ void scalar_test(void) {
     {
         /* Test zero product property. */
         secp256k1_scalar r1, v0;
-        secp256k1_scalar_set_int(&v0,0);
+        secp256k1_scalar_set_int(&v0, 0);
         secp256k1_scalar_mul(&r1, &s1, &v0);
         CHECK(secp256k1_scalar_eq(&r1, &v0));
     }
-
 }
 
-void run_scalar_tests(void) {
+void run_scalar_tests(void)
+{
     int i;
     for (i = 0; i < 128 * count; i++) {
         scalar_test();
@@ -998,8 +1029,7 @@ void run_scalar_tests(void) {
         /* Does check_overflow check catch all ones? */
         static const secp256k1_scalar overflowed = SECP256K1_SCALAR_CONST(
             0xFFFFFFFFUL, 0xFFFFFFFFUL, 0xFFFFFFFFUL, 0xFFFFFFFFUL,
-            0xFFFFFFFFUL, 0xFFFFFFFFUL, 0xFFFFFFFFUL, 0xFFFFFFFFUL
-        );
+            0xFFFFFFFFUL, 0xFFFFFFFFUL, 0xFFFFFFFFUL, 0xFFFFFFFFUL);
         CHECK(secp256k1_scalar_check_overflow(&overflowed));
     }
 
@@ -1284,8 +1314,7 @@ void run_scalar_tests(void) {
              {0x82, 0xc9, 0xfa, 0xb0, 0x68, 0x04, 0xa0, 0x00,
               0x82, 0xc9, 0xfa, 0xb0, 0x68, 0x04, 0xa0, 0x00,
               0xff, 0xff, 0xff, 0xff, 0xff, 0x6f, 0x03, 0xfb,
-              0xfa, 0x8a, 0x7d, 0xdf, 0x13, 0x86, 0xe2, 0x03}}
-        };
+              0xfa, 0x8a, 0x7d, 0xdf, 0x13, 0x86, 0xe2, 0x03}}};
         unsigned char res[33][2][32] = {
             {{0x0c, 0x3b, 0x0a, 0xca, 0x8d, 0x1a, 0x2f, 0xb9,
               0x8a, 0x7b, 0x53, 0x5a, 0x1f, 0xc5, 0x22, 0xa1,
@@ -1550,8 +1579,7 @@ void run_scalar_tests(void) {
              {0xdb, 0x21, 0x5c, 0x8d, 0x83, 0x1d, 0xb3, 0x34,
               0xc7, 0x0e, 0x43, 0xa1, 0x58, 0x79, 0x67, 0x13,
               0x1e, 0x86, 0x5d, 0x89, 0x63, 0xe6, 0x0a, 0x46,
-              0x5c, 0x02, 0x97, 0x1b, 0x62, 0x43, 0x86, 0xf5}}
-        };
+              0x5c, 0x02, 0x97, 0x1b, 0x62, 0x43, 0x86, 0xf5}}};
         secp256k1_scalar_set_int(&one, 1);
         for (i = 0; i < 33; i++) {
             secp256k1_scalar_set_b32(&x, chal[i][0], &overflow);
@@ -1591,27 +1619,30 @@ void run_scalar_tests(void) {
 
 /***** FIELD TESTS *****/
 
-void random_fe(secp256k1_fe *x) {
+void random_fe(secp256k1_fe *x)
+{
     unsigned char bin[32];
     do {
         secp256k1_rand256(bin);
         if (secp256k1_fe_set_b32(x, bin)) {
             return;
         }
-    } while(1);
+    } while (1);
 }
 
-void random_fe_test(secp256k1_fe *x) {
+void random_fe_test(secp256k1_fe *x)
+{
     unsigned char bin[32];
     do {
         secp256k1_rand256_test(bin);
         if (secp256k1_fe_set_b32(x, bin)) {
             return;
         }
-    } while(1);
+    } while (1);
 }
 
-void random_fe_non_zero(secp256k1_fe *nz) {
+void random_fe_non_zero(secp256k1_fe *nz)
+{
     int tries = 10;
     while (--tries >= 0) {
         random_fe(nz);
@@ -1624,7 +1655,8 @@ void random_fe_non_zero(secp256k1_fe *nz) {
     CHECK(tries >= 0);
 }
 
-void random_fe_non_square(secp256k1_fe *ns) {
+void random_fe_non_square(secp256k1_fe *ns)
+{
     secp256k1_fe r;
     random_fe_non_zero(ns);
     if (secp256k1_fe_sqrt(&r, ns)) {
@@ -1632,7 +1664,8 @@ void random_fe_non_square(secp256k1_fe *ns) {
     }
 }
 
-int check_fe_equal(const secp256k1_fe *a, const secp256k1_fe *b) {
+int check_fe_equal(const secp256k1_fe *a, const secp256k1_fe *b)
+{
     secp256k1_fe an = *a;
     secp256k1_fe bn = *b;
     secp256k1_fe_normalize_weak(&an);
@@ -1640,28 +1673,27 @@ int check_fe_equal(const secp256k1_fe *a, const secp256k1_fe *b) {
     return secp256k1_fe_equal_var(&an, &bn);
 }
 
-int check_fe_inverse(const secp256k1_fe *a, const secp256k1_fe *ai) {
+int check_fe_inverse(const secp256k1_fe *a, const secp256k1_fe *ai)
+{
     secp256k1_fe x;
     secp256k1_fe one = SECP256K1_FE_CONST(0, 0, 0, 0, 0, 0, 0, 1);
     secp256k1_fe_mul(&x, a, ai);
     return check_fe_equal(&x, &one);
 }
 
-void run_field_convert(void) {
+void run_field_convert(void)
+{
     static const unsigned char b32[32] = {
         0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
         0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18,
         0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29,
-        0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x40
-    };
+        0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x40};
     static const secp256k1_fe_storage fes = SECP256K1_FE_STORAGE_CONST(
         0x00010203UL, 0x04050607UL, 0x11121314UL, 0x15161718UL,
-        0x22232425UL, 0x26272829UL, 0x33343536UL, 0x37383940UL
-    );
+        0x22232425UL, 0x26272829UL, 0x33343536UL, 0x37383940UL);
     static const secp256k1_fe fe = SECP256K1_FE_CONST(
         0x00010203UL, 0x04050607UL, 0x11121314UL, 0x15161718UL,
-        0x22232425UL, 0x26272829UL, 0x33343536UL, 0x37383940UL
-    );
+        0x22232425UL, 0x26272829UL, 0x33343536UL, 0x37383940UL);
     secp256k1_fe fe2;
     unsigned char b322[32];
     secp256k1_fe_storage fes2;
@@ -1677,7 +1709,8 @@ void run_field_convert(void) {
     CHECK(memcmp(&fes2, &fes, sizeof(fes)) == 0);
 }
 
-int fe_memcmp(const secp256k1_fe *a, const secp256k1_fe *b) {
+int fe_memcmp(const secp256k1_fe *a, const secp256k1_fe *b)
+{
     secp256k1_fe t = *b;
 #ifdef VERIFY
     t.magnitude = a->magnitude;
@@ -1686,14 +1719,15 @@ int fe_memcmp(const secp256k1_fe *a, const secp256k1_fe *b) {
     return memcmp(a, &t, sizeof(secp256k1_fe));
 }
 
-void run_field_misc(void) {
+void run_field_misc(void)
+{
     secp256k1_fe x;
     secp256k1_fe y;
     secp256k1_fe z;
     secp256k1_fe q;
     secp256k1_fe fe5 = SECP256K1_FE_CONST(0, 0, 0, 0, 0, 0, 0, 5);
     int i, j;
-    for (i = 0; i < 5*count; i++) {
+    for (i = 0; i < 5 * count; i++) {
         secp256k1_fe_storage xs, ys, zs;
         random_fe(&x);
         random_fe_non_zero(&y);
@@ -1701,7 +1735,7 @@ void run_field_misc(void) {
         CHECK(secp256k1_fe_cmp_var(&x, &x) == 0);
         CHECK(secp256k1_fe_equal_var(&x, &x));
         z = x;
-        secp256k1_fe_add(&z,&y);
+        secp256k1_fe_add(&z, &y);
         /* Test fe conditional move; z is not normalized here. */
         q = x;
         secp256k1_fe_cmov(&x, &z, 0);
@@ -1716,13 +1750,13 @@ void run_field_misc(void) {
         secp256k1_fe_normalize_var(&z);
         CHECK(!secp256k1_fe_equal_var(&x, &z));
         secp256k1_fe_normalize_var(&q);
-        secp256k1_fe_cmov(&q, &z, (i&1));
+        secp256k1_fe_cmov(&q, &z, (i & 1));
         VERIFY_CHECK(q.normalized && q.magnitude == 1);
         for (j = 0; j < 6; j++) {
-            secp256k1_fe_negate(&z, &z, j+1);
+            secp256k1_fe_negate(&z, &z, j + 1);
             secp256k1_fe_normalize_var(&q);
-            secp256k1_fe_cmov(&q, &z, (j&1));
-            VERIFY_CHECK(!q.normalized && q.magnitude == (j+2));
+            secp256k1_fe_cmov(&q, &z, (j & 1));
+            VERIFY_CHECK(!q.normalized && q.magnitude == (j + 2));
         }
         secp256k1_fe_normalize_var(&z);
         /* Test storage conversion and conditional moves. */
@@ -1758,10 +1792,11 @@ void run_field_misc(void) {
     }
 }
 
-void run_field_inv(void) {
+void run_field_inv(void)
+{
     secp256k1_fe x, xi, xii;
     int i;
-    for (i = 0; i < 10*count; i++) {
+    for (i = 0; i < 10 * count; i++) {
         random_fe_non_zero(&x);
         secp256k1_fe_inv(&xi, &x);
         CHECK(check_fe_inverse(&x, &xi));
@@ -1770,10 +1805,11 @@ void run_field_inv(void) {
     }
 }
 
-void run_field_inv_var(void) {
+void run_field_inv_var(void)
+{
     secp256k1_fe x, xi, xii;
     int i;
-    for (i = 0; i < 10*count; i++) {
+    for (i = 0; i < 10 * count; i++) {
         random_fe_non_zero(&x);
         secp256k1_fe_inv_var(&xi, &x);
         CHECK(check_fe_inverse(&x, &xi));
@@ -1782,7 +1818,8 @@ void run_field_inv_var(void) {
     }
 }
 
-void run_field_inv_all_var(void) {
+void run_field_inv_all_var(void)
+{
     secp256k1_fe x[16], xi[16], xii[16];
     int i;
     /* Check it's safe to call for 0 elements */
@@ -1804,7 +1841,8 @@ void run_field_inv_all_var(void) {
     }
 }
 
-void run_sqr(void) {
+void run_sqr(void)
+{
     secp256k1_fe x, s;
 
     {
@@ -1820,7 +1858,8 @@ void run_sqr(void) {
     }
 }
 
-void test_sqrt(const secp256k1_fe *a, const secp256k1_fe *k) {
+void test_sqrt(const secp256k1_fe *a, const secp256k1_fe *k)
+{
     secp256k1_fe r1, r2;
     int v = secp256k1_fe_sqrt(&r1, a);
     CHECK((v == 0) == (k == NULL));
@@ -1828,13 +1867,16 @@ void test_sqrt(const secp256k1_fe *a, const secp256k1_fe *k) {
     if (k != NULL) {
         /* Check that the returned root is +/- the given known answer */
         secp256k1_fe_negate(&r2, &r1, 1);
-        secp256k1_fe_add(&r1, k); secp256k1_fe_add(&r2, k);
-        secp256k1_fe_normalize(&r1); secp256k1_fe_normalize(&r2);
+        secp256k1_fe_add(&r1, k);
+        secp256k1_fe_add(&r2, k);
+        secp256k1_fe_normalize(&r1);
+        secp256k1_fe_normalize(&r2);
         CHECK(secp256k1_fe_is_zero(&r1) || secp256k1_fe_is_zero(&r2));
     }
 }
 
-void run_sqrt(void) {
+void run_sqrt(void)
+{
     secp256k1_fe ns, x, s, t;
     int i;
 
@@ -1870,7 +1912,8 @@ void run_sqrt(void) {
 
 /***** GROUP TESTS *****/
 
-void ge_equals_ge(const secp256k1_ge *a, const secp256k1_ge *b) {
+void ge_equals_ge(const secp256k1_ge *a, const secp256k1_ge *b)
+{
     CHECK(a->infinity == b->infinity);
     if (a->infinity) {
         return;
@@ -1880,7 +1923,8 @@ void ge_equals_ge(const secp256k1_ge *a, const secp256k1_ge *b) {
 }
 
 /* This compares jacobian points including their Z, not just their geometric meaning. */
-int gej_xyz_equals_gej(const secp256k1_gej *a, const secp256k1_gej *b) {
+int gej_xyz_equals_gej(const secp256k1_gej *a, const secp256k1_gej *b)
+{
     secp256k1_gej a2;
     secp256k1_gej b2;
     int ret = 1;
@@ -1901,7 +1945,8 @@ int gej_xyz_equals_gej(const secp256k1_gej *a, const secp256k1_gej *b) {
     return ret;
 }
 
-void ge_equals_gej(const secp256k1_ge *a, const secp256k1_gej *b) {
+void ge_equals_gej(const secp256k1_ge *a, const secp256k1_gej *b)
+{
     secp256k1_fe z2s;
     secp256k1_fe u1, u2, s1, s2;
     CHECK(a->infinity == b->infinity);
@@ -1911,14 +1956,18 @@ void ge_equals_gej(const secp256k1_ge *a, const secp256k1_gej *b) {
     /* Check a.x * b.z^2 == b.x && a.y * b.z^3 == b.y, to avoid inverses. */
     secp256k1_fe_sqr(&z2s, &b->z);
     secp256k1_fe_mul(&u1, &a->x, &z2s);
-    u2 = b->x; secp256k1_fe_normalize_weak(&u2);
-    secp256k1_fe_mul(&s1, &a->y, &z2s); secp256k1_fe_mul(&s1, &s1, &b->z);
-    s2 = b->y; secp256k1_fe_normalize_weak(&s2);
+    u2 = b->x;
+    secp256k1_fe_normalize_weak(&u2);
+    secp256k1_fe_mul(&s1, &a->y, &z2s);
+    secp256k1_fe_mul(&s1, &s1, &b->z);
+    s2 = b->y;
+    secp256k1_fe_normalize_weak(&s2);
     CHECK(secp256k1_fe_equal_var(&u1, &u2));
     CHECK(secp256k1_fe_equal_var(&s1, &s2));
 }
 
-void test_ge(void) {
+void test_ge(void)
+{
     int i, i1;
 #ifdef USE_ENDOMORPHISM
     int runs = 6;
@@ -1978,7 +2027,7 @@ void test_ge(void) {
                 /* The point at infinity does not have a meaningful z inverse. Any should do. */
                 do {
                     random_field_element_test(&zs[i]);
-                } while(secp256k1_fe_is_zero(&zs[i]));
+                } while (secp256k1_fe_is_zero(&zs[i]));
             } else {
                 zs[i] = gej[i].z;
             }
@@ -1990,7 +2039,7 @@ void test_ge(void) {
     /* Generate random zf, and zfi2 = 1/zf^2, zfi3 = 1/zf^3 */
     do {
         random_field_element_test(&zf);
-    } while(secp256k1_fe_is_zero(&zf));
+    } while (secp256k1_fe_is_zero(&zf));
     random_field_element_magnitude(&zf);
     secp256k1_fe_inv_var(&zfi3, &zf);
     secp256k1_fe_sqr(&zfi2, &zfi3);
@@ -2006,7 +2055,8 @@ void test_ge(void) {
             secp256k1_gej_add_var(&refj, &gej[i1], &gej[i2], secp256k1_gej_is_infinity(&gej[i1]) ? NULL : &zr);
             /* Check Z ratio. */
             if (!secp256k1_gej_is_infinity(&gej[i1]) && !secp256k1_gej_is_infinity(&refj)) {
-                secp256k1_fe zrz; secp256k1_fe_mul(&zrz, &zr, &gej[i1].z);
+                secp256k1_fe zrz;
+                secp256k1_fe_mul(&zrz, &zr, &gej[i1].z);
                 CHECK(secp256k1_fe_equal_var(&zrz, &refj.z));
             }
             secp256k1_ge_set_gej_var(&ref, &refj);
@@ -2015,7 +2065,8 @@ void test_ge(void) {
             secp256k1_gej_add_ge_var(&resj, &gej[i1], &ge[i2], secp256k1_gej_is_infinity(&gej[i1]) ? NULL : &zr);
             ge_equals_gej(&ref, &resj);
             if (!secp256k1_gej_is_infinity(&gej[i1]) && !secp256k1_gej_is_infinity(&resj)) {
-                secp256k1_fe zrz; secp256k1_fe_mul(&zrz, &zr, &gej[i1].z);
+                secp256k1_fe zrz;
+                secp256k1_fe_mul(&zrz, &zr, &gej[i1].z);
                 CHECK(secp256k1_fe_equal_var(&zrz, &resj.z));
             }
 
@@ -2038,7 +2089,7 @@ void test_ge(void) {
             }
 
             /* Test doubling (var). */
-            if ((i1 == 0 && i2 == 0) || ((i1 + 3)/4 == (i2 + 3)/4 && ((i1 + 3)%4)/2 == ((i2 + 3)%4)/2)) {
+            if ((i1 == 0 && i2 == 0) || ((i1 + 3) / 4 == (i2 + 3) / 4 && ((i1 + 3) % 4) / 2 == ((i2 + 3) % 4) / 2)) {
                 secp256k1_fe zr2;
                 /* Normal doubling with Z ratio result. */
                 secp256k1_gej_double_var(&resj, &gej[i1], &zr2);
@@ -2052,7 +2103,7 @@ void test_ge(void) {
             }
 
             /* Test adding opposites. */
-            if ((i1 == 0 && i2 == 0) || ((i1 + 3)/4 == (i2 + 3)/4 && ((i1 + 3)%4)/2 != ((i2 + 3)%4)/2)) {
+            if ((i1 == 0 && i2 == 0) || ((i1 + 3) / 4 == (i2 + 3) / 4 && ((i1 + 3) % 4) / 2 != ((i2 + 3) % 4) / 2)) {
                 CHECK(secp256k1_ge_is_infinity(&ref));
             }
 
@@ -2122,7 +2173,8 @@ void test_ge(void) {
     free(zinv);
 }
 
-void test_add_neg_y_diff_x(void) {
+void test_add_neg_y_diff_x(void)
+{
     /* The point of this test is to check that we can add two points
      * whose y-coordinates are negatives of each other but whose x
      * coordinates differ. If the x-coordinates were the same, these
@@ -2157,20 +2209,17 @@ void test_add_neg_y_diff_x(void) {
         0x8d24cd95, 0x0a355af1, 0x3c543505, 0x44238d30,
         0x0643d79f, 0x05a59614, 0x2f8ec030, 0xd58977cb,
         0x001e337a, 0x38093dcd, 0x6c0f386d, 0x0b1293a8,
-        0x4d72c879, 0xd7681924, 0x44e6d2f3, 0x9190117d
-    );
+        0x4d72c879, 0xd7681924, 0x44e6d2f3, 0x9190117d);
     secp256k1_gej bj = SECP256K1_GEJ_CONST(
         0xc7b74206, 0x1f788cd9, 0xabd0937d, 0x164a0d86,
         0x95f6ff75, 0xf19a4ce9, 0xd013bd7b, 0xbf92d2a7,
         0xffe1cc85, 0xc7f6c232, 0x93f0c792, 0xf4ed6c57,
-        0xb28d3786, 0x2897e6db, 0xbb192d0b, 0x6e6feab2
-    );
+        0xb28d3786, 0x2897e6db, 0xbb192d0b, 0x6e6feab2);
     secp256k1_gej sumj = SECP256K1_GEJ_CONST(
         0x671a63c0, 0x3efdad4c, 0x389a7798, 0x24356027,
         0xb3d69010, 0x278625c3, 0x5c86d390, 0x184a8f7a,
         0x5f6409c2, 0x2ce01f2b, 0x511fd375, 0x25071d08,
-        0xda651801, 0x70e95caf, 0x8f0d893c, 0xbed8fbbe
-    );
+        0xda651801, 0x70e95caf, 0x8f0d893c, 0xbed8fbbe);
     secp256k1_ge b;
     secp256k1_gej resj;
     secp256k1_ge res;
@@ -2189,7 +2238,8 @@ void test_add_neg_y_diff_x(void) {
     ge_equals_gej(&res, &sumj);
 }
 
-void run_ge(void) {
+void run_ge(void)
+{
     int i;
     for (i = 0; i < count * 32; i++) {
         test_ge();
@@ -2197,10 +2247,11 @@ void run_ge(void) {
     test_add_neg_y_diff_x();
 }
 
-void test_ec_combine(void) {
+void test_ec_combine(void)
+{
     secp256k1_scalar sum = SECP256K1_SCALAR_CONST(0, 0, 0, 0, 0, 0, 0, 0);
     secp256k1_pubkey data[6];
-    const secp256k1_pubkey* d[6];
+    const secp256k1_pubkey *d[6];
     secp256k1_pubkey sd;
     secp256k1_pubkey sd2;
     secp256k1_gej Qj;
@@ -2222,14 +2273,16 @@ void test_ec_combine(void) {
     }
 }
 
-void run_ec_combine(void) {
+void run_ec_combine(void)
+{
     int i;
     for (i = 0; i < count * 8; i++) {
-         test_ec_combine();
+        test_ec_combine();
     }
 }
 
-void test_group_decompress(const secp256k1_fe* x) {
+void test_group_decompress(const secp256k1_fe *x)
+{
     /* The input itself, normalized. */
     secp256k1_fe fex = *x;
     secp256k1_fe fez;
@@ -2293,7 +2346,8 @@ void test_group_decompress(const secp256k1_fe* x) {
     }
 }
 
-void run_group_decompress(void) {
+void run_group_decompress(void)
+{
     int i;
     for (i = 0; i < count * 4; i++) {
         secp256k1_fe fe;
@@ -2304,23 +2358,21 @@ void run_group_decompress(void) {
 
 /***** ECMULT TESTS *****/
 
-void run_ecmult_chain(void) {
+void run_ecmult_chain(void)
+{
     /* random starting point A (on the curve) */
     secp256k1_gej a = SECP256K1_GEJ_CONST(
         0x8b30bbe9, 0xae2a9906, 0x96b22f67, 0x0709dff3,
         0x727fd8bc, 0x04d3362c, 0x6c7bf458, 0xe2846004,
         0xa357ae91, 0x5c4a6528, 0x1309edf2, 0x0504740f,
-        0x0eb33439, 0x90216b4f, 0x81063cb6, 0x5f2f7e0f
-    );
+        0x0eb33439, 0x90216b4f, 0x81063cb6, 0x5f2f7e0f);
     /* two random initial factors xn and gn */
     secp256k1_scalar xn = SECP256K1_SCALAR_CONST(
         0x84cc5452, 0xf7fde1ed, 0xb4d38a8c, 0xe9b1b84c,
-        0xcef31f14, 0x6e569be9, 0x705d357a, 0x42985407
-    );
+        0xcef31f14, 0x6e569be9, 0x705d357a, 0x42985407);
     secp256k1_scalar gn = SECP256K1_SCALAR_CONST(
         0xa1e58d22, 0x553dcd42, 0xb2398062, 0x5d4c57a9,
-        0x6e9323d4, 0x2b3152e5, 0xca2c3990, 0xedc7c9de
-    );
+        0x6e9323d4, 0x2b3152e5, 0xca2c3990, 0xedc7c9de);
     /* two small multipliers to be applied to xn and gn in every iteration: */
     static const secp256k1_scalar xf = SECP256K1_SCALAR_CONST(0, 0, 0, 0, 0, 0, 0, 0x1337);
     static const secp256k1_scalar gf = SECP256K1_SCALAR_CONST(0, 0, 0, 0, 0, 0, 0, 0x7113);
@@ -2334,7 +2386,7 @@ void run_ecmult_chain(void) {
 
     /* the point being computed */
     x = a;
-    for (i = 0; i < 200*count; i++) {
+    for (i = 0; i < 200 * count; i++) {
         /* in each iteration, compute X = xn*X + gn*G; */
         secp256k1_ecmult(&ctx->ecmult_ctx, &x, &x, &xn, &gn);
         /* also compute ae and ge: the actual accumulated factors for A and G */
@@ -2353,8 +2405,7 @@ void run_ecmult_chain(void) {
                 0xD6E96687, 0xF9B10D09, 0x2A6F3543, 0x9D86CEBE,
                 0xA4535D0D, 0x409F5358, 0x6440BD74, 0xB933E830,
                 0xB95CBCA2, 0xC77DA786, 0x539BE8FD, 0x53354D2D,
-                0x3B4F566A, 0xE6580454, 0x07ED6015, 0xEE1B2A88
-            );
+                0x3B4F566A, 0xE6580454, 0x07ED6015, 0xEE1B2A88);
 
             secp256k1_gej_neg(&rp, &rp);
             secp256k1_gej_add_var(&rp, &rp, &x, NULL);
@@ -2368,7 +2419,8 @@ void run_ecmult_chain(void) {
     CHECK(secp256k1_gej_is_infinity(&x2));
 }
 
-void test_point_times_order(const secp256k1_gej *point) {
+void test_point_times_order(const secp256k1_gej *point)
+{
     /* X * (point + G) + (order-X) * (pointer + G) = 0 */
     secp256k1_scalar x;
     secp256k1_scalar nx;
@@ -2380,7 +2432,7 @@ void test_point_times_order(const secp256k1_gej *point) {
     size_t psize = 65;
     random_scalar_order_test(&x);
     secp256k1_scalar_negate(&nx, &x);
-    secp256k1_ecmult(&ctx->ecmult_ctx, &res1, point, &x, &x); /* calc res1 = x * point + x * G; */
+    secp256k1_ecmult(&ctx->ecmult_ctx, &res1, point, &x, &x);   /* calc res1 = x * point + x * G; */
     secp256k1_ecmult(&ctx->ecmult_ctx, &res2, point, &nx, &nx); /* calc res2 = (order - x) * point + (order - x) * G; */
     secp256k1_gej_add_var(&res1, &res1, &res2, NULL);
     CHECK(secp256k1_gej_is_infinity(&res1));
@@ -2403,13 +2455,13 @@ void test_point_times_order(const secp256k1_gej *point) {
     ge_equals_ge(&res3, &secp256k1_ge_const_g);
 }
 
-void run_point_times_order(void) {
+void run_point_times_order(void)
+{
     int i;
     secp256k1_fe x = SECP256K1_FE_CONST(0, 0, 0, 0, 0, 0, 0, 2);
     static const secp256k1_fe xr = SECP256K1_FE_CONST(
         0x7603CB59, 0xB0EF6C63, 0xFE608479, 0x2A0C378C,
-        0xDB3233A8, 0x0F8A9A09, 0xA877DEAD, 0x31B38C45
-    );
+        0xDB3233A8, 0x0F8A9A09, 0xA877DEAD, 0x31B38C45);
     for (i = 0; i < 500; i++) {
         secp256k1_ge p;
         if (secp256k1_ge_set_xo_var(&p, &x, 1)) {
@@ -2425,26 +2477,24 @@ void run_point_times_order(void) {
     CHECK(secp256k1_fe_equal_var(&x, &xr));
 }
 
-void ecmult_const_random_mult(void) {
+void ecmult_const_random_mult(void)
+{
     /* random starting point A (on the curve) */
     secp256k1_ge a = SECP256K1_GE_CONST(
         0x6d986544, 0x57ff52b8, 0xcf1b8126, 0x5b802a5b,
         0xa97f9263, 0xb1e88044, 0x93351325, 0x91bc450a,
         0x535c59f7, 0x325e5d2b, 0xc391fbe8, 0x3c12787c,
-        0x337e4a98, 0xe82a9011, 0x0123ba37, 0xdd769c7d
-    );
+        0x337e4a98, 0xe82a9011, 0x0123ba37, 0xdd769c7d);
     /* random initial factor xn */
     secp256k1_scalar xn = SECP256K1_SCALAR_CONST(
         0x649d4f77, 0xc4242df7, 0x7f2079c9, 0x14530327,
-        0xa31b876a, 0xd2d8ce2a, 0x2236d5c6, 0xd7b2029b
-    );
+        0xa31b876a, 0xd2d8ce2a, 0x2236d5c6, 0xd7b2029b);
     /* expected xn * A (from sage) */
     secp256k1_ge expected_b = SECP256K1_GE_CONST(
         0x23773684, 0x4d209dc7, 0x098a786f, 0x20d06fcd,
         0x070a38bf, 0xc11ac651, 0x03004319, 0x1e2a8786,
         0xed8c3b8e, 0xc06dd57b, 0xd06ea66e, 0x45492b0f,
-        0xb84e4e1b, 0xfb77e21f, 0x96baae2a, 0x63dec956
-    );
+        0xb84e4e1b, 0xfb77e21f, 0x96baae2a, 0x63dec956);
     secp256k1_gej b;
     secp256k1_ecmult_const(&b, &a, &xn, 256);
 
@@ -2452,7 +2502,8 @@ void ecmult_const_random_mult(void) {
     ge_equals_gej(&expected_b, &b);
 }
 
-void ecmult_const_commutativity(void) {
+void ecmult_const_commutativity(void)
+{
     secp256k1_scalar a;
     secp256k1_scalar b;
     secp256k1_gej res1;
@@ -2473,7 +2524,8 @@ void ecmult_const_commutativity(void) {
     ge_equals_ge(&mid1, &mid2);
 }
 
-void ecmult_const_mult_zero_one(void) {
+void ecmult_const_mult_zero_one(void)
+{
     secp256k1_scalar zero = SECP256K1_SCALAR_CONST(0, 0, 0, 0, 0, 0, 0, 0);
     secp256k1_scalar one = SECP256K1_SCALAR_CONST(0, 0, 0, 0, 0, 0, 0, 1);
     secp256k1_scalar negone;
@@ -2495,18 +2547,17 @@ void ecmult_const_mult_zero_one(void) {
     ge_equals_ge(&res2, &point);
 }
 
-void ecmult_const_chain_multiply(void) {
+void ecmult_const_chain_multiply(void)
+{
     /* Check known result (randomly generated test problem from sage) */
     const secp256k1_scalar scalar = SECP256K1_SCALAR_CONST(
         0x4968d524, 0x2abf9b7a, 0x466abbcf, 0x34b11b6d,
-        0xcd83d307, 0x827bed62, 0x05fad0ce, 0x18fae63b
-    );
+        0xcd83d307, 0x827bed62, 0x05fad0ce, 0x18fae63b);
     const secp256k1_gej expected_point = SECP256K1_GEJ_CONST(
         0x5494c15d, 0x32099706, 0xc2395f94, 0x348745fd,
         0x757ce30e, 0x4e8c90fb, 0xa2bad184, 0xf883c69f,
         0x5d195d20, 0xe191bf7f, 0x1be3e55f, 0x56a80196,
-        0x6071ad01, 0xf1462f66, 0xc997fa94, 0xdb858435
-    );
+        0x6071ad01, 0xf1462f66, 0xc997fa94, 0xdb858435);
     secp256k1_gej point;
     secp256k1_ge res;
     int i;
@@ -2521,7 +2572,8 @@ void ecmult_const_chain_multiply(void) {
     ge_equals_gej(&res, &expected_point);
 }
 
-void run_ecmult_const_tests(void) {
+void run_ecmult_const_tests(void)
+{
     ecmult_const_mult_zero_one();
     ecmult_const_random_mult();
     ecmult_const_commutativity();
@@ -2533,14 +2585,16 @@ typedef struct {
     secp256k1_ge *pt;
 } ecmult_multi_data;
 
-static int ecmult_multi_callback(secp256k1_scalar *sc, secp256k1_ge *pt, size_t idx, void *cbdata) {
-    ecmult_multi_data *data = (ecmult_multi_data*) cbdata;
+static int ecmult_multi_callback(secp256k1_scalar *sc, secp256k1_ge *pt, size_t idx, void *cbdata)
+{
+    ecmult_multi_data *data = (ecmult_multi_data *)cbdata;
     *sc = data->sc[idx];
     *pt = data->pt[idx];
     return 1;
 }
 
-static int ecmult_multi_false_callback(secp256k1_scalar *sc, secp256k1_ge *pt, size_t idx, void *cbdata) {
+static int ecmult_multi_false_callback(secp256k1_scalar *sc, secp256k1_ge *pt, size_t idx, void *cbdata)
+{
     (void)sc;
     (void)pt;
     (void)idx;
@@ -2548,7 +2602,8 @@ static int ecmult_multi_false_callback(secp256k1_scalar *sc, secp256k1_ge *pt, s
     return 0;
 }
 
-void test_ecmult_multi(secp256k1_scratch *scratch, secp256k1_ecmult_multi_func ecmult_multi) {
+void test_ecmult_multi(secp256k1_scratch *scratch, secp256k1_ecmult_multi_func ecmult_multi)
+{
     int ncount;
     secp256k1_scalar szero;
     secp256k1_scalar sc[32];
@@ -2618,7 +2673,7 @@ void test_ecmult_multi(secp256k1_scratch *scratch, secp256k1_ecmult_multi_func e
     for (ncount = 0; ncount < count; ncount++) {
         secp256k1_ge ptg;
         size_t i, j;
-        size_t sizes[] = { 2, 10, 32 };
+        size_t sizes[] = {2, 10, 32};
 
         for (j = 0; j < 3; j++) {
             for (i = 0; i < 32; i++) {
@@ -2642,8 +2697,8 @@ void test_ecmult_multi(secp256k1_scratch *scratch, secp256k1_ecmult_multi_func e
         for (j = 0; j < 3; j++) {
             random_group_element_test(&ptg);
             for (i = 0; i < 16; i++) {
-                random_scalar_order(&sc[2*i]);
-                secp256k1_scalar_negate(&sc[2*i + 1], &sc[2*i]);
+                random_scalar_order(&sc[2 * i]);
+                secp256k1_scalar_negate(&sc[2 * i + 1], &sc[2 * i]);
                 pt[2 * i] = ptg;
                 pt[2 * i + 1] = ptg;
             }
@@ -2655,10 +2710,10 @@ void test_ecmult_multi(secp256k1_scratch *scratch, secp256k1_ecmult_multi_func e
             for (i = 0; i < 16; i++) {
                 random_group_element_test(&ptg);
 
-                sc[2*i] = sc[0];
-                sc[2*i+1] = sc[0];
+                sc[2 * i] = sc[0];
+                sc[2 * i + 1] = sc[0];
                 pt[2 * i] = ptg;
-                secp256k1_ge_neg(&pt[2*i+1], &pt[2*i]);
+                secp256k1_ge_neg(&pt[2 * i + 1], &pt[2 * i]);
             }
 
             CHECK(ecmult_multi(&ctx->ecmult_ctx, scratch, &r, &szero, ecmult_multi_callback, &data, sizes[j]));
@@ -2751,8 +2806,8 @@ void test_ecmult_multi(secp256k1_scratch *scratch, secp256k1_ecmult_multi_func e
         random_group_element_test(&ptg);
         secp256k1_gej_set_ge(&ptgj, &ptg);
 
-        for(t0i = 0; t0i < TOP; t0i++) {
-            for(t1i = 0; t1i < TOP; t1i++) {
+        for (t0i = 0; t0i < TOP; t0i++) {
+            for (t1i = 0; t1i < TOP; t1i++) {
                 secp256k1_gej t0p, t1p;
                 secp256k1_scalar t0, t1;
 
@@ -2764,8 +2819,8 @@ void test_ecmult_multi(secp256k1_scratch *scratch, secp256k1_ecmult_multi_func e
                 secp256k1_ecmult(&ctx->ecmult_ctx, &t0p, &ptgj, &t0, &szero);
                 secp256k1_ecmult(&ctx->ecmult_ctx, &t1p, &ptgj, &t1, &szero);
 
-                for(s0i = 0; s0i < TOP; s0i++) {
-                    for(s1i = 0; s1i < TOP; s1i++) {
+                for (s0i = 0; s0i < TOP; s0i++) {
+                    for (s1i = 0; s1i < TOP; s1i++) {
                         secp256k1_scalar tmp1, tmp2;
                         secp256k1_gej expected, actual;
 
@@ -2793,11 +2848,12 @@ void test_ecmult_multi(secp256k1_scratch *scratch, secp256k1_ecmult_multi_func e
     }
 }
 
-void test_secp256k1_pippenger_bucket_window_inv(void) {
+void test_secp256k1_pippenger_bucket_window_inv(void)
+{
     int i;
 
     CHECK(secp256k1_pippenger_bucket_window_inv(0) == 0);
-    for(i = 1; i <= PIPPENGER_MAX_BUCKET_WINDOW; i++) {
+    for (i = 1; i <= PIPPENGER_MAX_BUCKET_WINDOW; i++) {
 #ifdef USE_ENDOMORPHISM
         /* Bucket_window of 8 is not used with endo */
         if (i == 8) {
@@ -2806,7 +2862,7 @@ void test_secp256k1_pippenger_bucket_window_inv(void) {
 #endif
         CHECK(secp256k1_pippenger_bucket_window(secp256k1_pippenger_bucket_window_inv(i)) == i);
         if (i != PIPPENGER_MAX_BUCKET_WINDOW) {
-            CHECK(secp256k1_pippenger_bucket_window(secp256k1_pippenger_bucket_window_inv(i)+1) > i);
+            CHECK(secp256k1_pippenger_bucket_window(secp256k1_pippenger_bucket_window_inv(i) + 1) > i);
         }
     }
 }
@@ -2815,14 +2871,15 @@ void test_secp256k1_pippenger_bucket_window_inv(void) {
  * Probabilistically test the function returning the maximum number of possible points
  * for a given scratch space.
  */
-void test_ecmult_multi_pippenger_max_points(void) {
+void test_ecmult_multi_pippenger_max_points(void)
+{
     size_t scratch_size = secp256k1_rand_int(256);
-    size_t max_size = secp256k1_pippenger_scratch_size(secp256k1_pippenger_bucket_window_inv(PIPPENGER_MAX_BUCKET_WINDOW-1)+512, 12);
+    size_t max_size = secp256k1_pippenger_scratch_size(secp256k1_pippenger_bucket_window_inv(PIPPENGER_MAX_BUCKET_WINDOW - 1) + 512, 12);
     secp256k1_scratch *scratch;
     size_t n_points_supported;
     int bucket_window = 0;
 
-    for(; scratch_size < max_size; scratch_size+=256) {
+    for (; scratch_size < max_size; scratch_size += 256) {
         scratch = secp256k1_scratch_create(&ctx->error_callback, scratch_size);
         CHECK(scratch != NULL);
         n_points_supported = secp256k1_pippenger_max_points(scratch);
@@ -2842,8 +2899,9 @@ void test_ecmult_multi_pippenger_max_points(void) {
  * Run secp256k1_ecmult_multi_var with num points and a scratch space restricted to
  * 1 <= i <= num points.
  */
-void test_ecmult_multi_batching(void) {
-    static const int n_points = 2*ECMULT_PIPPENGER_THRESHOLD;
+void test_ecmult_multi_batching(void)
+{
+    static const int n_points = 2 * ECMULT_PIPPENGER_THRESHOLD;
     secp256k1_scalar scG;
     secp256k1_scalar szero;
     secp256k1_scalar *sc = (secp256k1_scalar *)checked_malloc(&ctx->error_callback, sizeof(secp256k1_scalar) * n_points);
@@ -2860,7 +2918,7 @@ void test_ecmult_multi_batching(void) {
     /* Get random scalars and group elements and compute result */
     random_scalar_order(&scG);
     secp256k1_ecmult(&ctx->ecmult_ctx, &r2, &r2, &szero, &scG);
-    for(i = 0; i < n_points; i++) {
+    for (i = 0; i < n_points; i++) {
         secp256k1_ge ptg;
         secp256k1_gej ptgj;
         random_group_element_test(&ptg);
@@ -2880,19 +2938,19 @@ void test_ecmult_multi_batching(void) {
 
     /* Test with space for 1 point in pippenger. That's not enough because
      * ecmult_multi selects strauss which requires more memory. */
-    scratch = secp256k1_scratch_create(&ctx->error_callback, secp256k1_pippenger_scratch_size(1, 1) + PIPPENGER_SCRATCH_OBJECTS*ALIGNMENT);
+    scratch = secp256k1_scratch_create(&ctx->error_callback, secp256k1_pippenger_scratch_size(1, 1) + PIPPENGER_SCRATCH_OBJECTS * ALIGNMENT);
     CHECK(!secp256k1_ecmult_multi_var(&ctx->ecmult_ctx, scratch, &r, &scG, ecmult_multi_callback, &data, 1));
     secp256k1_scratch_destroy(scratch);
 
     secp256k1_gej_neg(&r2, &r2);
-    for(i = 1; i <= n_points; i++) {
+    for (i = 1; i <= n_points; i++) {
         if (i > ECMULT_PIPPENGER_THRESHOLD) {
             int bucket_window = secp256k1_pippenger_bucket_window(i);
             size_t scratch_size = secp256k1_pippenger_scratch_size(i, bucket_window);
-            scratch = secp256k1_scratch_create(&ctx->error_callback, scratch_size + PIPPENGER_SCRATCH_OBJECTS*ALIGNMENT);
+            scratch = secp256k1_scratch_create(&ctx->error_callback, scratch_size + PIPPENGER_SCRATCH_OBJECTS * ALIGNMENT);
         } else {
             size_t scratch_size = secp256k1_strauss_scratch_size(i);
-            scratch = secp256k1_scratch_create(&ctx->error_callback, scratch_size + STRAUSS_SCRATCH_OBJECTS*ALIGNMENT);
+            scratch = secp256k1_scratch_create(&ctx->error_callback, scratch_size + STRAUSS_SCRATCH_OBJECTS * ALIGNMENT);
         }
         CHECK(secp256k1_ecmult_multi_var(&ctx->ecmult_ctx, scratch, &r, &scG, ecmult_multi_callback, &data, n_points));
         secp256k1_gej_add_var(&r, &r, &r2, NULL);
@@ -2903,7 +2961,8 @@ void test_ecmult_multi_batching(void) {
     free(pt);
 }
 
-void run_ecmult_multi_tests(void) {
+void run_ecmult_multi_tests(void)
+{
     secp256k1_scratch *scratch;
 
     test_secp256k1_pippenger_bucket_window_inv();
@@ -2915,14 +2974,15 @@ void run_ecmult_multi_tests(void) {
     secp256k1_scratch_destroy(scratch);
 
     /* Run test_ecmult_multi with space for exactly one point */
-    scratch = secp256k1_scratch_create(&ctx->error_callback, secp256k1_strauss_scratch_size(1) + STRAUSS_SCRATCH_OBJECTS*ALIGNMENT);
+    scratch = secp256k1_scratch_create(&ctx->error_callback, secp256k1_strauss_scratch_size(1) + STRAUSS_SCRATCH_OBJECTS * ALIGNMENT);
     test_ecmult_multi(scratch, secp256k1_ecmult_multi_var);
     secp256k1_scratch_destroy(scratch);
 
     test_ecmult_multi_batching();
 }
 
-void test_wnaf(const secp256k1_scalar *number, int w) {
+void test_wnaf(const secp256k1_scalar *number, int w)
+{
     secp256k1_scalar x, two, t;
     int wnaf[256];
     int zeroes = -1;
@@ -2932,15 +2992,15 @@ void test_wnaf(const secp256k1_scalar *number, int w) {
     secp256k1_scalar_set_int(&two, 2);
     bits = secp256k1_ecmult_wnaf(wnaf, 256, number, w);
     CHECK(bits <= 256);
-    for (i = bits-1; i >= 0; i--) {
+    for (i = bits - 1; i >= 0; i--) {
         int v = wnaf[i];
         secp256k1_scalar_mul(&x, &x, &two);
         if (v) {
-            CHECK(zeroes == -1 || zeroes >= w-1); /* check that distance between non-zero elements is at least w-1 */
-            zeroes=0;
-            CHECK((v & 1) == 1); /* check non-zero elements are odd */
-            CHECK(v <= (1 << (w-1)) - 1); /* check range below */
-            CHECK(v >= -(1 << (w-1)) - 1); /* check range above */
+            CHECK(zeroes == -1 || zeroes >= w - 1); /* check that distance between non-zero elements is at least w-1 */
+            zeroes = 0;
+            CHECK((v & 1) == 1);             /* check non-zero elements are odd */
+            CHECK(v <= (1 << (w - 1)) - 1);  /* check range below */
+            CHECK(v >= -(1 << (w - 1)) - 1); /* check range above */
         } else {
             CHECK(zeroes != -1); /* check that no unnecessary zero padding exists */
             zeroes++;
@@ -2956,7 +3016,8 @@ void test_wnaf(const secp256k1_scalar *number, int w) {
     CHECK(secp256k1_scalar_eq(&x, number)); /* check that wnaf represents number */
 }
 
-void test_constant_wnaf_negate(const secp256k1_scalar *number) {
+void test_constant_wnaf_negate(const secp256k1_scalar *number)
+{
     secp256k1_scalar neg1 = *number;
     secp256k1_scalar neg2 = *number;
     int sign1 = 1;
@@ -2971,7 +3032,8 @@ void test_constant_wnaf_negate(const secp256k1_scalar *number) {
     CHECK(secp256k1_scalar_eq(&neg1, &neg2));
 }
 
-void test_constant_wnaf(const secp256k1_scalar *number, int w) {
+void test_constant_wnaf(const secp256k1_scalar *number, int w)
+{
     secp256k1_scalar x, shift;
     int wnaf[256] = {0};
     int i;
@@ -2993,8 +3055,8 @@ void test_constant_wnaf(const secp256k1_scalar *number, int w) {
     for (i = WNAF_SIZE_BITS(bits, w); i >= 0; --i) {
         secp256k1_scalar t;
         int v = wnaf[i];
-        CHECK(v != 0); /* check nonzero */
-        CHECK(v & 1);  /* check parity */
+        CHECK(v != 0);        /* check nonzero */
+        CHECK(v & 1);         /* check parity */
         CHECK(v > -(1 << w)); /* check range above */
         CHECK(v < (1 << w));  /* check range below */
 
@@ -3012,7 +3074,8 @@ void test_constant_wnaf(const secp256k1_scalar *number, int w) {
     CHECK(secp256k1_scalar_eq(&x, &num));
 }
 
-void test_fixed_wnaf(const secp256k1_scalar *number, int w) {
+void test_fixed_wnaf(const secp256k1_scalar *number, int w)
+{
     secp256k1_scalar x, shift;
     int wnaf[256] = {0};
     int i;
@@ -3029,12 +3092,12 @@ void test_fixed_wnaf(const secp256k1_scalar *number, int w) {
 #endif
     skew = secp256k1_wnaf_fixed(wnaf, &num, w);
 
-    for (i = WNAF_SIZE(w)-1; i >= 0; --i) {
+    for (i = WNAF_SIZE(w) - 1; i >= 0; --i) {
         secp256k1_scalar t;
         int v = wnaf[i];
-        CHECK(v == 0 || v & 1);  /* check parity */
-        CHECK(v > -(1 << w)); /* check range above */
-        CHECK(v < (1 << w));  /* check range below */
+        CHECK(v == 0 || v & 1); /* check parity */
+        CHECK(v > -(1 << w));   /* check range above */
+        CHECK(v < (1 << w));    /* check range below */
 
         secp256k1_scalar_mul(&x, &x, &shift);
         if (v >= 0) {
@@ -3052,9 +3115,10 @@ void test_fixed_wnaf(const secp256k1_scalar *number, int w) {
 
 /* Checks that the first 8 elements of wnaf are equal to wnaf_expected and the
  * rest is 0.*/
-void test_fixed_wnaf_small_helper(int *wnaf, int *wnaf_expected, int w) {
+void test_fixed_wnaf_small_helper(int *wnaf, int *wnaf_expected, int w)
+{
     int i;
-    for (i = WNAF_SIZE(w)-1; i >= 8; --i) {
+    for (i = WNAF_SIZE(w) - 1; i >= 8; --i) {
         CHECK(wnaf[i] == 0);
     }
     for (i = 7; i >= 0; --i) {
@@ -3062,7 +3126,8 @@ void test_fixed_wnaf_small_helper(int *wnaf, int *wnaf_expected, int w) {
     }
 }
 
-void test_fixed_wnaf_small(void) {
+void test_fixed_wnaf_small(void)
+{
     int w = 4;
     int wnaf[256] = {0};
     int i;
@@ -3071,7 +3136,7 @@ void test_fixed_wnaf_small(void) {
 
     secp256k1_scalar_set_int(&num, 0);
     skew = secp256k1_wnaf_fixed(wnaf, &num, w);
-    for (i = WNAF_SIZE(w)-1; i >= 0; --i) {
+    for (i = WNAF_SIZE(w) - 1; i >= 0; --i) {
         int v = wnaf[i];
         CHECK(v == 0);
     }
@@ -3079,7 +3144,7 @@ void test_fixed_wnaf_small(void) {
 
     secp256k1_scalar_set_int(&num, 1);
     skew = secp256k1_wnaf_fixed(wnaf, &num, w);
-    for (i = WNAF_SIZE(w)-1; i >= 1; --i) {
+    for (i = WNAF_SIZE(w) - 1; i >= 1; --i) {
         int v = wnaf[i];
         CHECK(v == 0);
     }
@@ -3087,28 +3152,28 @@ void test_fixed_wnaf_small(void) {
     CHECK(skew == 0);
 
     {
-        int wnaf_expected[8] = { 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf };
+        int wnaf_expected[8] = {0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf};
         secp256k1_scalar_set_int(&num, 0xffffffff);
         skew = secp256k1_wnaf_fixed(wnaf, &num, w);
         test_fixed_wnaf_small_helper(wnaf, wnaf_expected, w);
         CHECK(skew == 0);
     }
     {
-        int wnaf_expected[8] = { -1, -1, -1, -1, -1, -1, -1, 0xf };
+        int wnaf_expected[8] = {-1, -1, -1, -1, -1, -1, -1, 0xf};
         secp256k1_scalar_set_int(&num, 0xeeeeeeee);
         skew = secp256k1_wnaf_fixed(wnaf, &num, w);
         test_fixed_wnaf_small_helper(wnaf, wnaf_expected, w);
         CHECK(skew == 1);
     }
     {
-        int wnaf_expected[8] = { 1, 0, 1, 0, 1, 0, 1, 0 };
+        int wnaf_expected[8] = {1, 0, 1, 0, 1, 0, 1, 0};
         secp256k1_scalar_set_int(&num, 0x01010101);
         skew = secp256k1_wnaf_fixed(wnaf, &num, w);
         test_fixed_wnaf_small_helper(wnaf, wnaf_expected, w);
         CHECK(skew == 0);
     }
     {
-        int wnaf_expected[8] = { -0xf, 0, 0xf, -0xf, 0, 0xf, 1, 0 };
+        int wnaf_expected[8] = {-0xf, 0, 0xf, -0xf, 0, 0xf, 1, 0};
         secp256k1_scalar_set_int(&num, 0x01ef1ef1);
         skew = secp256k1_wnaf_fixed(wnaf, &num, w);
         test_fixed_wnaf_small_helper(wnaf, wnaf_expected, w);
@@ -3116,7 +3181,8 @@ void test_fixed_wnaf_small(void) {
     }
 }
 
-void run_wnaf(void) {
+void run_wnaf(void)
+{
     int i;
     secp256k1_scalar n = {{0}};
 
@@ -3131,7 +3197,7 @@ void run_wnaf(void) {
     /* Random tests */
     for (i = 0; i < count; i++) {
         random_scalar_order(&n);
-        test_wnaf(&n, 4+(i%10));
+        test_wnaf(&n, 4 + (i % 10));
         test_constant_wnaf_negate(&n);
         test_constant_wnaf(&n, 4 + (i % 10));
         test_fixed_wnaf(&n, 4 + (i % 10));
@@ -3143,7 +3209,8 @@ void run_wnaf(void) {
     CHECK(secp256k1_scalar_is_zero(&n));
 }
 
-void test_ecmult_constants(void) {
+void test_ecmult_constants(void)
+{
     /* Test ecmult_gen() for [0..36) and [order-36..0). */
     secp256k1_scalar x;
     secp256k1_gej r;
@@ -3151,7 +3218,7 @@ void test_ecmult_constants(void) {
     int i;
     int j;
     secp256k1_ge_neg(&ng, &secp256k1_ge_const_g);
-    for (i = 0; i < 36; i++ ) {
+    for (i = 0; i < 36; i++) {
         secp256k1_scalar_set_int(&x, i);
         secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &r, &x);
         for (j = 0; j < i; j++) {
@@ -3162,7 +3229,7 @@ void test_ecmult_constants(void) {
         }
         CHECK(secp256k1_gej_is_infinity(&r));
     }
-    for (i = 1; i <= 36; i++ ) {
+    for (i = 1; i <= 36; i++) {
         secp256k1_scalar_set_int(&x, i);
         secp256k1_scalar_negate(&x, &x);
         secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &r, &x);
@@ -3176,11 +3243,13 @@ void test_ecmult_constants(void) {
     }
 }
 
-void run_ecmult_constants(void) {
+void run_ecmult_constants(void)
+{
     test_ecmult_constants();
 }
 
-void test_ecmult_gen_blind(void) {
+void test_ecmult_gen_blind(void)
+{
     /* Test ecmult_gen() blinding and confirm that the blinding changes, the affine points match, and the z's don't match. */
     secp256k1_scalar key;
     secp256k1_scalar b;
@@ -3203,7 +3272,8 @@ void test_ecmult_gen_blind(void) {
     ge_equals_gej(&pge, &pgej2);
 }
 
-void test_ecmult_gen_blind_reset(void) {
+void test_ecmult_gen_blind_reset(void)
+{
     /* Test ecmult_gen() blinding reset and confirm that the blinding is consistent. */
     secp256k1_scalar b;
     secp256k1_gej initial;
@@ -3215,7 +3285,8 @@ void test_ecmult_gen_blind_reset(void) {
     CHECK(gej_xyz_equals_gej(&initial, &ctx->ecmult_gen_ctx.initial));
 }
 
-void run_ecmult_gen_blind(void) {
+void run_ecmult_gen_blind(void)
+{
     int i;
     test_ecmult_gen_blind_reset();
     for (i = 0; i < 10; i++) {
@@ -3225,7 +3296,8 @@ void run_ecmult_gen_blind(void) {
 
 #ifdef USE_ENDOMORPHISM
 /***** ENDOMORPHISH TESTS *****/
-void test_scalar_split(void) {
+void test_scalar_split(void)
+{
     secp256k1_scalar full;
     secp256k1_scalar s1, slam;
     const unsigned char zero[32] = {0};
@@ -3248,12 +3320,14 @@ void test_scalar_split(void) {
     CHECK(memcmp(zero, tmp, 16) == 0);
 }
 
-void run_endomorphism_tests(void) {
+void run_endomorphism_tests(void)
+{
     test_scalar_split();
 }
 #endif
 
-void ec_pubkey_parse_pointtest(const unsigned char *input, int xvalid, int yvalid) {
+void ec_pubkey_parse_pointtest(const unsigned char *input, int xvalid, int yvalid)
+{
     unsigned char pubkeyc[65];
     secp256k1_pubkey pubkey;
     secp256k1_ge ge;
@@ -3278,7 +3352,7 @@ void ec_pubkey_parse_pointtest(const unsigned char *input, int xvalid, int yvali
             xpass = xvalid && (pubkeyclen == 33) && ((i & 254) == 2);
             /* Do we expect a parse and re-serialize as uncompressed to give a matching y? */
             ypass = xvalid && yvalid && ((i & 4) == ((pubkeyclen == 65) << 2)) &&
-                ((i == 4) || ((i & 251) == ysign)) && ((pubkeyclen == 33) || (pubkeyclen == 65));
+                    ((i == 4) || ((i & 251) == ysign)) && ((pubkeyclen == 33) || (pubkeyclen == 65));
             if (xpass || ypass) {
                 /* These cases must parse. */
                 unsigned char pubkeyo[65];
@@ -3328,185 +3402,1314 @@ void ec_pubkey_parse_pointtest(const unsigned char *input, int xvalid, int yvali
     secp256k1_context_set_illegal_callback(ctx, NULL, NULL);
 }
 
-void run_ec_pubkey_parse_test(void) {
+void run_ec_pubkey_parse_test(void)
+{
 #define SECP256K1_EC_PARSE_TEST_NVALID (12)
     const unsigned char valid[SECP256K1_EC_PARSE_TEST_NVALID][64] = {
-        {
-            /* Point with leading and trailing zeros in x and y serialization. */
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x42, 0x52,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x64, 0xef, 0xa1, 0x7b, 0x77, 0x61, 0xe1, 0xe4, 0x27, 0x06, 0x98, 0x9f, 0xb4, 0x83,
-            0xb8, 0xd2, 0xd4, 0x9b, 0xf7, 0x8f, 0xae, 0x98, 0x03, 0xf0, 0x99, 0xb8, 0x34, 0xed, 0xeb, 0x00
-        },
+        {/* Point with leading and trailing zeros in x and y serialization. */
+         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x42, 0x52,
+         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+         0x00, 0x00, 0x64, 0xef, 0xa1, 0x7b, 0x77, 0x61, 0xe1, 0xe4, 0x27, 0x06, 0x98, 0x9f, 0xb4, 0x83,
+         0xb8, 0xd2, 0xd4, 0x9b, 0xf7, 0x8f, 0xae, 0x98, 0x03, 0xf0, 0x99, 0xb8, 0x34, 0xed, 0xeb, 0x00},
         {
             /* Point with x equal to a 3rd root of unity.*/
-            0x7a, 0xe9, 0x6a, 0x2b, 0x65, 0x7c, 0x07, 0x10, 0x6e, 0x64, 0x47, 0x9e, 0xac, 0x34, 0x34, 0xe9,
-            0x9c, 0xf0, 0x49, 0x75, 0x12, 0xf5, 0x89, 0x95, 0xc1, 0x39, 0x6c, 0x28, 0x71, 0x95, 0x01, 0xee,
-            0x42, 0x18, 0xf2, 0x0a, 0xe6, 0xc6, 0x46, 0xb3, 0x63, 0xdb, 0x68, 0x60, 0x58, 0x22, 0xfb, 0x14,
-            0x26, 0x4c, 0xa8, 0xd2, 0x58, 0x7f, 0xdd, 0x6f, 0xbc, 0x75, 0x0d, 0x58, 0x7e, 0x76, 0xa7, 0xee,
+            0x7a,
+            0xe9,
+            0x6a,
+            0x2b,
+            0x65,
+            0x7c,
+            0x07,
+            0x10,
+            0x6e,
+            0x64,
+            0x47,
+            0x9e,
+            0xac,
+            0x34,
+            0x34,
+            0xe9,
+            0x9c,
+            0xf0,
+            0x49,
+            0x75,
+            0x12,
+            0xf5,
+            0x89,
+            0x95,
+            0xc1,
+            0x39,
+            0x6c,
+            0x28,
+            0x71,
+            0x95,
+            0x01,
+            0xee,
+            0x42,
+            0x18,
+            0xf2,
+            0x0a,
+            0xe6,
+            0xc6,
+            0x46,
+            0xb3,
+            0x63,
+            0xdb,
+            0x68,
+            0x60,
+            0x58,
+            0x22,
+            0xfb,
+            0x14,
+            0x26,
+            0x4c,
+            0xa8,
+            0xd2,
+            0x58,
+            0x7f,
+            0xdd,
+            0x6f,
+            0xbc,
+            0x75,
+            0x0d,
+            0x58,
+            0x7e,
+            0x76,
+            0xa7,
+            0xee,
         },
         {
             /* Point with largest x. (1/2) */
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0xff, 0xff, 0xfc, 0x2c,
-            0x0e, 0x99, 0x4b, 0x14, 0xea, 0x72, 0xf8, 0xc3, 0xeb, 0x95, 0xc7, 0x1e, 0xf6, 0x92, 0x57, 0x5e,
-            0x77, 0x50, 0x58, 0x33, 0x2d, 0x7e, 0x52, 0xd0, 0x99, 0x5c, 0xf8, 0x03, 0x88, 0x71, 0xb6, 0x7d,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xfe,
+            0xff,
+            0xff,
+            0xfc,
+            0x2c,
+            0x0e,
+            0x99,
+            0x4b,
+            0x14,
+            0xea,
+            0x72,
+            0xf8,
+            0xc3,
+            0xeb,
+            0x95,
+            0xc7,
+            0x1e,
+            0xf6,
+            0x92,
+            0x57,
+            0x5e,
+            0x77,
+            0x50,
+            0x58,
+            0x33,
+            0x2d,
+            0x7e,
+            0x52,
+            0xd0,
+            0x99,
+            0x5c,
+            0xf8,
+            0x03,
+            0x88,
+            0x71,
+            0xb6,
+            0x7d,
         },
         {
             /* Point with largest x. (2/2) */
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0xff, 0xff, 0xfc, 0x2c,
-            0xf1, 0x66, 0xb4, 0xeb, 0x15, 0x8d, 0x07, 0x3c, 0x14, 0x6a, 0x38, 0xe1, 0x09, 0x6d, 0xa8, 0xa1,
-            0x88, 0xaf, 0xa7, 0xcc, 0xd2, 0x81, 0xad, 0x2f, 0x66, 0xa3, 0x07, 0xfb, 0x77, 0x8e, 0x45, 0xb2,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xfe,
+            0xff,
+            0xff,
+            0xfc,
+            0x2c,
+            0xf1,
+            0x66,
+            0xb4,
+            0xeb,
+            0x15,
+            0x8d,
+            0x07,
+            0x3c,
+            0x14,
+            0x6a,
+            0x38,
+            0xe1,
+            0x09,
+            0x6d,
+            0xa8,
+            0xa1,
+            0x88,
+            0xaf,
+            0xa7,
+            0xcc,
+            0xd2,
+            0x81,
+            0xad,
+            0x2f,
+            0x66,
+            0xa3,
+            0x07,
+            0xfb,
+            0x77,
+            0x8e,
+            0x45,
+            0xb2,
         },
         {
             /* Point with smallest x. (1/2) */
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
-            0x42, 0x18, 0xf2, 0x0a, 0xe6, 0xc6, 0x46, 0xb3, 0x63, 0xdb, 0x68, 0x60, 0x58, 0x22, 0xfb, 0x14,
-            0x26, 0x4c, 0xa8, 0xd2, 0x58, 0x7f, 0xdd, 0x6f, 0xbc, 0x75, 0x0d, 0x58, 0x7e, 0x76, 0xa7, 0xee,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x01,
+            0x42,
+            0x18,
+            0xf2,
+            0x0a,
+            0xe6,
+            0xc6,
+            0x46,
+            0xb3,
+            0x63,
+            0xdb,
+            0x68,
+            0x60,
+            0x58,
+            0x22,
+            0xfb,
+            0x14,
+            0x26,
+            0x4c,
+            0xa8,
+            0xd2,
+            0x58,
+            0x7f,
+            0xdd,
+            0x6f,
+            0xbc,
+            0x75,
+            0x0d,
+            0x58,
+            0x7e,
+            0x76,
+            0xa7,
+            0xee,
         },
         {
             /* Point with smallest x. (2/2) */
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
-            0xbd, 0xe7, 0x0d, 0xf5, 0x19, 0x39, 0xb9, 0x4c, 0x9c, 0x24, 0x97, 0x9f, 0xa7, 0xdd, 0x04, 0xeb,
-            0xd9, 0xb3, 0x57, 0x2d, 0xa7, 0x80, 0x22, 0x90, 0x43, 0x8a, 0xf2, 0xa6, 0x81, 0x89, 0x54, 0x41,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x01,
+            0xbd,
+            0xe7,
+            0x0d,
+            0xf5,
+            0x19,
+            0x39,
+            0xb9,
+            0x4c,
+            0x9c,
+            0x24,
+            0x97,
+            0x9f,
+            0xa7,
+            0xdd,
+            0x04,
+            0xeb,
+            0xd9,
+            0xb3,
+            0x57,
+            0x2d,
+            0xa7,
+            0x80,
+            0x22,
+            0x90,
+            0x43,
+            0x8a,
+            0xf2,
+            0xa6,
+            0x81,
+            0x89,
+            0x54,
+            0x41,
         },
         {
             /* Point with largest y. (1/3) */
-            0x1f, 0xe1, 0xe5, 0xef, 0x3f, 0xce, 0xb5, 0xc1, 0x35, 0xab, 0x77, 0x41, 0x33, 0x3c, 0xe5, 0xa6,
-            0xe8, 0x0d, 0x68, 0x16, 0x76, 0x53, 0xf6, 0xb2, 0xb2, 0x4b, 0xcb, 0xcf, 0xaa, 0xaf, 0xf5, 0x07,
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0xff, 0xff, 0xfc, 0x2e,
+            0x1f,
+            0xe1,
+            0xe5,
+            0xef,
+            0x3f,
+            0xce,
+            0xb5,
+            0xc1,
+            0x35,
+            0xab,
+            0x77,
+            0x41,
+            0x33,
+            0x3c,
+            0xe5,
+            0xa6,
+            0xe8,
+            0x0d,
+            0x68,
+            0x16,
+            0x76,
+            0x53,
+            0xf6,
+            0xb2,
+            0xb2,
+            0x4b,
+            0xcb,
+            0xcf,
+            0xaa,
+            0xaf,
+            0xf5,
+            0x07,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xfe,
+            0xff,
+            0xff,
+            0xfc,
+            0x2e,
         },
         {
             /* Point with largest y. (2/3) */
-            0xcb, 0xb0, 0xde, 0xab, 0x12, 0x57, 0x54, 0xf1, 0xfd, 0xb2, 0x03, 0x8b, 0x04, 0x34, 0xed, 0x9c,
-            0xb3, 0xfb, 0x53, 0xab, 0x73, 0x53, 0x91, 0x12, 0x99, 0x94, 0xa5, 0x35, 0xd9, 0x25, 0xf6, 0x73,
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0xff, 0xff, 0xfc, 0x2e,
+            0xcb,
+            0xb0,
+            0xde,
+            0xab,
+            0x12,
+            0x57,
+            0x54,
+            0xf1,
+            0xfd,
+            0xb2,
+            0x03,
+            0x8b,
+            0x04,
+            0x34,
+            0xed,
+            0x9c,
+            0xb3,
+            0xfb,
+            0x53,
+            0xab,
+            0x73,
+            0x53,
+            0x91,
+            0x12,
+            0x99,
+            0x94,
+            0xa5,
+            0x35,
+            0xd9,
+            0x25,
+            0xf6,
+            0x73,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xfe,
+            0xff,
+            0xff,
+            0xfc,
+            0x2e,
         },
         {
             /* Point with largest y. (3/3) */
-            0x14, 0x6d, 0x3b, 0x65, 0xad, 0xd9, 0xf5, 0x4c, 0xcc, 0xa2, 0x85, 0x33, 0xc8, 0x8e, 0x2c, 0xbc,
-            0x63, 0xf7, 0x44, 0x3e, 0x16, 0x58, 0x78, 0x3a, 0xb4, 0x1f, 0x8e, 0xf9, 0x7c, 0x2a, 0x10, 0xb5,
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0xff, 0xff, 0xfc, 0x2e,
+            0x14,
+            0x6d,
+            0x3b,
+            0x65,
+            0xad,
+            0xd9,
+            0xf5,
+            0x4c,
+            0xcc,
+            0xa2,
+            0x85,
+            0x33,
+            0xc8,
+            0x8e,
+            0x2c,
+            0xbc,
+            0x63,
+            0xf7,
+            0x44,
+            0x3e,
+            0x16,
+            0x58,
+            0x78,
+            0x3a,
+            0xb4,
+            0x1f,
+            0x8e,
+            0xf9,
+            0x7c,
+            0x2a,
+            0x10,
+            0xb5,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xfe,
+            0xff,
+            0xff,
+            0xfc,
+            0x2e,
         },
         {
             /* Point with smallest y. (1/3) */
-            0x1f, 0xe1, 0xe5, 0xef, 0x3f, 0xce, 0xb5, 0xc1, 0x35, 0xab, 0x77, 0x41, 0x33, 0x3c, 0xe5, 0xa6,
-            0xe8, 0x0d, 0x68, 0x16, 0x76, 0x53, 0xf6, 0xb2, 0xb2, 0x4b, 0xcb, 0xcf, 0xaa, 0xaf, 0xf5, 0x07,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+            0x1f,
+            0xe1,
+            0xe5,
+            0xef,
+            0x3f,
+            0xce,
+            0xb5,
+            0xc1,
+            0x35,
+            0xab,
+            0x77,
+            0x41,
+            0x33,
+            0x3c,
+            0xe5,
+            0xa6,
+            0xe8,
+            0x0d,
+            0x68,
+            0x16,
+            0x76,
+            0x53,
+            0xf6,
+            0xb2,
+            0xb2,
+            0x4b,
+            0xcb,
+            0xcf,
+            0xaa,
+            0xaf,
+            0xf5,
+            0x07,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x01,
         },
         {
             /* Point with smallest y. (2/3) */
-            0xcb, 0xb0, 0xde, 0xab, 0x12, 0x57, 0x54, 0xf1, 0xfd, 0xb2, 0x03, 0x8b, 0x04, 0x34, 0xed, 0x9c,
-            0xb3, 0xfb, 0x53, 0xab, 0x73, 0x53, 0x91, 0x12, 0x99, 0x94, 0xa5, 0x35, 0xd9, 0x25, 0xf6, 0x73,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+            0xcb,
+            0xb0,
+            0xde,
+            0xab,
+            0x12,
+            0x57,
+            0x54,
+            0xf1,
+            0xfd,
+            0xb2,
+            0x03,
+            0x8b,
+            0x04,
+            0x34,
+            0xed,
+            0x9c,
+            0xb3,
+            0xfb,
+            0x53,
+            0xab,
+            0x73,
+            0x53,
+            0x91,
+            0x12,
+            0x99,
+            0x94,
+            0xa5,
+            0x35,
+            0xd9,
+            0x25,
+            0xf6,
+            0x73,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x01,
         },
-        {
-            /* Point with smallest y. (3/3) */
-            0x14, 0x6d, 0x3b, 0x65, 0xad, 0xd9, 0xf5, 0x4c, 0xcc, 0xa2, 0x85, 0x33, 0xc8, 0x8e, 0x2c, 0xbc,
-            0x63, 0xf7, 0x44, 0x3e, 0x16, 0x58, 0x78, 0x3a, 0xb4, 0x1f, 0x8e, 0xf9, 0x7c, 0x2a, 0x10, 0xb5,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01
-        }
-    };
+        {/* Point with smallest y. (3/3) */
+         0x14, 0x6d, 0x3b, 0x65, 0xad, 0xd9, 0xf5, 0x4c, 0xcc, 0xa2, 0x85, 0x33, 0xc8, 0x8e, 0x2c, 0xbc,
+         0x63, 0xf7, 0x44, 0x3e, 0x16, 0x58, 0x78, 0x3a, 0xb4, 0x1f, 0x8e, 0xf9, 0x7c, 0x2a, 0x10, 0xb5,
+         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}};
 #define SECP256K1_EC_PARSE_TEST_NXVALID (4)
     const unsigned char onlyxvalid[SECP256K1_EC_PARSE_TEST_NXVALID][64] = {
         {
             /* Valid if y overflow ignored (y = 1 mod p). (1/3) */
-            0x1f, 0xe1, 0xe5, 0xef, 0x3f, 0xce, 0xb5, 0xc1, 0x35, 0xab, 0x77, 0x41, 0x33, 0x3c, 0xe5, 0xa6,
-            0xe8, 0x0d, 0x68, 0x16, 0x76, 0x53, 0xf6, 0xb2, 0xb2, 0x4b, 0xcb, 0xcf, 0xaa, 0xaf, 0xf5, 0x07,
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0xff, 0xff, 0xfc, 0x30,
+            0x1f,
+            0xe1,
+            0xe5,
+            0xef,
+            0x3f,
+            0xce,
+            0xb5,
+            0xc1,
+            0x35,
+            0xab,
+            0x77,
+            0x41,
+            0x33,
+            0x3c,
+            0xe5,
+            0xa6,
+            0xe8,
+            0x0d,
+            0x68,
+            0x16,
+            0x76,
+            0x53,
+            0xf6,
+            0xb2,
+            0xb2,
+            0x4b,
+            0xcb,
+            0xcf,
+            0xaa,
+            0xaf,
+            0xf5,
+            0x07,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xfe,
+            0xff,
+            0xff,
+            0xfc,
+            0x30,
         },
         {
             /* Valid if y overflow ignored (y = 1 mod p). (2/3) */
-            0xcb, 0xb0, 0xde, 0xab, 0x12, 0x57, 0x54, 0xf1, 0xfd, 0xb2, 0x03, 0x8b, 0x04, 0x34, 0xed, 0x9c,
-            0xb3, 0xfb, 0x53, 0xab, 0x73, 0x53, 0x91, 0x12, 0x99, 0x94, 0xa5, 0x35, 0xd9, 0x25, 0xf6, 0x73,
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0xff, 0xff, 0xfc, 0x30,
+            0xcb,
+            0xb0,
+            0xde,
+            0xab,
+            0x12,
+            0x57,
+            0x54,
+            0xf1,
+            0xfd,
+            0xb2,
+            0x03,
+            0x8b,
+            0x04,
+            0x34,
+            0xed,
+            0x9c,
+            0xb3,
+            0xfb,
+            0x53,
+            0xab,
+            0x73,
+            0x53,
+            0x91,
+            0x12,
+            0x99,
+            0x94,
+            0xa5,
+            0x35,
+            0xd9,
+            0x25,
+            0xf6,
+            0x73,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xfe,
+            0xff,
+            0xff,
+            0xfc,
+            0x30,
         },
         {
             /* Valid if y overflow ignored (y = 1 mod p). (3/3)*/
-            0x14, 0x6d, 0x3b, 0x65, 0xad, 0xd9, 0xf5, 0x4c, 0xcc, 0xa2, 0x85, 0x33, 0xc8, 0x8e, 0x2c, 0xbc,
-            0x63, 0xf7, 0x44, 0x3e, 0x16, 0x58, 0x78, 0x3a, 0xb4, 0x1f, 0x8e, 0xf9, 0x7c, 0x2a, 0x10, 0xb5,
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0xff, 0xff, 0xfc, 0x30,
+            0x14,
+            0x6d,
+            0x3b,
+            0x65,
+            0xad,
+            0xd9,
+            0xf5,
+            0x4c,
+            0xcc,
+            0xa2,
+            0x85,
+            0x33,
+            0xc8,
+            0x8e,
+            0x2c,
+            0xbc,
+            0x63,
+            0xf7,
+            0x44,
+            0x3e,
+            0x16,
+            0x58,
+            0x78,
+            0x3a,
+            0xb4,
+            0x1f,
+            0x8e,
+            0xf9,
+            0x7c,
+            0x2a,
+            0x10,
+            0xb5,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xfe,
+            0xff,
+            0xff,
+            0xfc,
+            0x30,
         },
-        {
-            /* x on curve, y is from y^2 = x^3 + 8. */
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03
-        }
-    };
+        {/* x on curve, y is from y^2 = x^3 + 8. */
+         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03}};
 #define SECP256K1_EC_PARSE_TEST_NINVALID (7)
     const unsigned char invalid[SECP256K1_EC_PARSE_TEST_NINVALID][64] = {
         {
             /* x is third root of -8, y is -1 * (x^3+7); also on the curve for y^2 = x^3 + 9. */
-            0x0a, 0x2d, 0x2b, 0xa9, 0x35, 0x07, 0xf1, 0xdf, 0x23, 0x37, 0x70, 0xc2, 0xa7, 0x97, 0x96, 0x2c,
-            0xc6, 0x1f, 0x6d, 0x15, 0xda, 0x14, 0xec, 0xd4, 0x7d, 0x8d, 0x27, 0xae, 0x1c, 0xd5, 0xf8, 0x53,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+            0x0a,
+            0x2d,
+            0x2b,
+            0xa9,
+            0x35,
+            0x07,
+            0xf1,
+            0xdf,
+            0x23,
+            0x37,
+            0x70,
+            0xc2,
+            0xa7,
+            0x97,
+            0x96,
+            0x2c,
+            0xc6,
+            0x1f,
+            0x6d,
+            0x15,
+            0xda,
+            0x14,
+            0xec,
+            0xd4,
+            0x7d,
+            0x8d,
+            0x27,
+            0xae,
+            0x1c,
+            0xd5,
+            0xf8,
+            0x53,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x01,
         },
         {
             /* Valid if x overflow ignored (x = 1 mod p). */
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0xff, 0xff, 0xfc, 0x30,
-            0x42, 0x18, 0xf2, 0x0a, 0xe6, 0xc6, 0x46, 0xb3, 0x63, 0xdb, 0x68, 0x60, 0x58, 0x22, 0xfb, 0x14,
-            0x26, 0x4c, 0xa8, 0xd2, 0x58, 0x7f, 0xdd, 0x6f, 0xbc, 0x75, 0x0d, 0x58, 0x7e, 0x76, 0xa7, 0xee,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xfe,
+            0xff,
+            0xff,
+            0xfc,
+            0x30,
+            0x42,
+            0x18,
+            0xf2,
+            0x0a,
+            0xe6,
+            0xc6,
+            0x46,
+            0xb3,
+            0x63,
+            0xdb,
+            0x68,
+            0x60,
+            0x58,
+            0x22,
+            0xfb,
+            0x14,
+            0x26,
+            0x4c,
+            0xa8,
+            0xd2,
+            0x58,
+            0x7f,
+            0xdd,
+            0x6f,
+            0xbc,
+            0x75,
+            0x0d,
+            0x58,
+            0x7e,
+            0x76,
+            0xa7,
+            0xee,
         },
         {
             /* Valid if x overflow ignored (x = 1 mod p). */
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0xff, 0xff, 0xfc, 0x30,
-            0xbd, 0xe7, 0x0d, 0xf5, 0x19, 0x39, 0xb9, 0x4c, 0x9c, 0x24, 0x97, 0x9f, 0xa7, 0xdd, 0x04, 0xeb,
-            0xd9, 0xb3, 0x57, 0x2d, 0xa7, 0x80, 0x22, 0x90, 0x43, 0x8a, 0xf2, 0xa6, 0x81, 0x89, 0x54, 0x41,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xfe,
+            0xff,
+            0xff,
+            0xfc,
+            0x30,
+            0xbd,
+            0xe7,
+            0x0d,
+            0xf5,
+            0x19,
+            0x39,
+            0xb9,
+            0x4c,
+            0x9c,
+            0x24,
+            0x97,
+            0x9f,
+            0xa7,
+            0xdd,
+            0x04,
+            0xeb,
+            0xd9,
+            0xb3,
+            0x57,
+            0x2d,
+            0xa7,
+            0x80,
+            0x22,
+            0x90,
+            0x43,
+            0x8a,
+            0xf2,
+            0xa6,
+            0x81,
+            0x89,
+            0x54,
+            0x41,
         },
         {
             /* x is -1, y is the result of the sqrt ladder; also on the curve for y^2 = x^3 - 5. */
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0xff, 0xff, 0xfc, 0x2e,
-            0xf4, 0x84, 0x14, 0x5c, 0xb0, 0x14, 0x9b, 0x82, 0x5d, 0xff, 0x41, 0x2f, 0xa0, 0x52, 0xa8, 0x3f,
-            0xcb, 0x72, 0xdb, 0x61, 0xd5, 0x6f, 0x37, 0x70, 0xce, 0x06, 0x6b, 0x73, 0x49, 0xa2, 0xaa, 0x28,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xfe,
+            0xff,
+            0xff,
+            0xfc,
+            0x2e,
+            0xf4,
+            0x84,
+            0x14,
+            0x5c,
+            0xb0,
+            0x14,
+            0x9b,
+            0x82,
+            0x5d,
+            0xff,
+            0x41,
+            0x2f,
+            0xa0,
+            0x52,
+            0xa8,
+            0x3f,
+            0xcb,
+            0x72,
+            0xdb,
+            0x61,
+            0xd5,
+            0x6f,
+            0x37,
+            0x70,
+            0xce,
+            0x06,
+            0x6b,
+            0x73,
+            0x49,
+            0xa2,
+            0xaa,
+            0x28,
         },
         {
             /* x is -1, y is the result of the sqrt ladder; also on the curve for y^2 = x^3 - 5. */
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0xff, 0xff, 0xfc, 0x2e,
-            0x0b, 0x7b, 0xeb, 0xa3, 0x4f, 0xeb, 0x64, 0x7d, 0xa2, 0x00, 0xbe, 0xd0, 0x5f, 0xad, 0x57, 0xc0,
-            0x34, 0x8d, 0x24, 0x9e, 0x2a, 0x90, 0xc8, 0x8f, 0x31, 0xf9, 0x94, 0x8b, 0xb6, 0x5d, 0x52, 0x07,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xfe,
+            0xff,
+            0xff,
+            0xfc,
+            0x2e,
+            0x0b,
+            0x7b,
+            0xeb,
+            0xa3,
+            0x4f,
+            0xeb,
+            0x64,
+            0x7d,
+            0xa2,
+            0x00,
+            0xbe,
+            0xd0,
+            0x5f,
+            0xad,
+            0x57,
+            0xc0,
+            0x34,
+            0x8d,
+            0x24,
+            0x9e,
+            0x2a,
+            0x90,
+            0xc8,
+            0x8f,
+            0x31,
+            0xf9,
+            0x94,
+            0x8b,
+            0xb6,
+            0x5d,
+            0x52,
+            0x07,
         },
         {
             /* x is zero, y is the result of the sqrt ladder; also on the curve for y^2 = x^3 - 7. */
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x8f, 0x53, 0x7e, 0xef, 0xdf, 0xc1, 0x60, 0x6a, 0x07, 0x27, 0xcd, 0x69, 0xb4, 0xa7, 0x33, 0x3d,
-            0x38, 0xed, 0x44, 0xe3, 0x93, 0x2a, 0x71, 0x79, 0xee, 0xcb, 0x4b, 0x6f, 0xba, 0x93, 0x60, 0xdc,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x8f,
+            0x53,
+            0x7e,
+            0xef,
+            0xdf,
+            0xc1,
+            0x60,
+            0x6a,
+            0x07,
+            0x27,
+            0xcd,
+            0x69,
+            0xb4,
+            0xa7,
+            0x33,
+            0x3d,
+            0x38,
+            0xed,
+            0x44,
+            0xe3,
+            0x93,
+            0x2a,
+            0x71,
+            0x79,
+            0xee,
+            0xcb,
+            0x4b,
+            0x6f,
+            0xba,
+            0x93,
+            0x60,
+            0xdc,
         },
-        {
-            /* x is zero, y is the result of the sqrt ladder; also on the curve for y^2 = x^3 - 7. */
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x70, 0xac, 0x81, 0x10, 0x20, 0x3e, 0x9f, 0x95, 0xf8, 0xd8, 0x32, 0x96, 0x4b, 0x58, 0xcc, 0xc2,
-            0xc7, 0x12, 0xbb, 0x1c, 0x6c, 0xd5, 0x8e, 0x86, 0x11, 0x34, 0xb4, 0x8f, 0x45, 0x6c, 0x9b, 0x53
-        }
-    };
+        {/* x is zero, y is the result of the sqrt ladder; also on the curve for y^2 = x^3 - 7. */
+         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+         0x70, 0xac, 0x81, 0x10, 0x20, 0x3e, 0x9f, 0x95, 0xf8, 0xd8, 0x32, 0x96, 0x4b, 0x58, 0xcc, 0xc2,
+         0xc7, 0x12, 0xbb, 0x1c, 0x6c, 0xd5, 0x8e, 0x86, 0x11, 0x34, 0xb4, 0x8f, 0x45, 0x6c, 0x9b, 0x53}};
     const unsigned char pubkeyc[66] = {
         /* Serialization of G. */
         0x04, 0x79, 0xBE, 0x66, 0x7E, 0xF9, 0xDC, 0xBB, 0xAC, 0x55, 0xA0, 0x62, 0x95, 0xCE, 0x87, 0x0B,
         0x07, 0x02, 0x9B, 0xFC, 0xDB, 0x2D, 0xCE, 0x28, 0xD9, 0x59, 0xF2, 0x81, 0x5B, 0x16, 0xF8, 0x17,
         0x98, 0x48, 0x3A, 0xDA, 0x77, 0x26, 0xA3, 0xC4, 0x65, 0x5D, 0xA4, 0xFB, 0xFC, 0x0E, 0x11, 0x08,
         0xA8, 0xFD, 0x17, 0xB4, 0x48, 0xA6, 0x85, 0x54, 0x19, 0x9C, 0x47, 0xD0, 0x8F, 0xFB, 0x10, 0xD4,
-        0xB8, 0x00
-    };
+        0xB8, 0x00};
     unsigned char sout[65];
     unsigned char shortkey[2];
     secp256k1_ge ge;
@@ -3530,7 +4733,7 @@ void run_ec_pubkey_parse_test(void) {
     CHECK(secp256k1_pubkey_load(ctx, &ge, &pubkey) == 0);
     CHECK(ecount == 1);
     /* Length one claimed, fail, zeroize, no illegal arg error. */
-    for (i = 0; i < 256 ; i++) {
+    for (i = 0; i < 256; i++) {
         memset(&pubkey, 0xfe, sizeof(pubkey));
         ecount = 0;
         shortkey[0] = i;
@@ -3543,7 +4746,7 @@ void run_ec_pubkey_parse_test(void) {
         CHECK(ecount == 1);
     }
     /* Length two claimed, fail, zeroize, no illegal arg error. */
-    for (i = 0; i < 65536 ; i++) {
+    for (i = 0; i < 65536; i++) {
         memset(&pubkey, 0xfe, sizeof(pubkey));
         ecount = 0;
         shortkey[0] = i & 255;
@@ -3655,13 +4858,13 @@ void run_ec_pubkey_parse_test(void) {
     }
 }
 
-void run_eckey_edge_case_test(void) {
+void run_eckey_edge_case_test(void)
+{
     const unsigned char orderc[32] = {
         0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
         0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe,
         0xba, 0xae, 0xdc, 0xe6, 0xaf, 0x48, 0xa0, 0x3b,
-        0xbf, 0xd2, 0x5e, 0x8c, 0xd0, 0x36, 0x41, 0x41
-    };
+        0xbf, 0xd2, 0x5e, 0x8c, 0xd0, 0x36, 0x41, 0x41};
     const unsigned char zeros[sizeof(secp256k1_pubkey)] = {0x00};
     unsigned char ctmp[33];
     unsigned char ctmp2[33];
@@ -3891,14 +5094,16 @@ void run_eckey_edge_case_test(void) {
     secp256k1_context_set_illegal_callback(ctx, NULL, NULL);
 }
 
-void random_sign(secp256k1_scalar *sigr, secp256k1_scalar *sigs, const secp256k1_scalar *key, const secp256k1_scalar *msg, int *recid) {
+void random_sign(secp256k1_scalar *sigr, secp256k1_scalar *sigs, const secp256k1_scalar *key, const secp256k1_scalar *msg, int *recid)
+{
     secp256k1_scalar nonce;
     do {
         random_scalar_order_test(&nonce);
-    } while(!secp256k1_ecdsa_sig_sign(&ctx->ecmult_gen_ctx, sigr, sigs, key, msg, &nonce, recid));
+    } while (!secp256k1_ecdsa_sig_sign(&ctx->ecmult_gen_ctx, sigr, sigs, key, msg, &nonce, recid));
 }
 
-void test_ecdsa_sign_verify(void) {
+void test_ecdsa_sign_verify(void)
+{
     secp256k1_gej pubj;
     secp256k1_ge pub;
     secp256k1_scalar one;
@@ -3911,7 +5116,7 @@ void test_ecdsa_sign_verify(void) {
     secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &pubj, &key);
     secp256k1_ge_set_gej(&pub, &pubj);
     getrec = secp256k1_rand_bits(1);
-    random_sign(&sigr, &sigs, &key, &msg, getrec?&recid:NULL);
+    random_sign(&sigr, &sigs, &key, &msg, getrec ? &recid : NULL);
     if (getrec) {
         CHECK(recid >= 0 && recid < 4);
     }
@@ -3921,15 +5126,17 @@ void test_ecdsa_sign_verify(void) {
     CHECK(!secp256k1_ecdsa_sig_verify(&ctx->ecmult_ctx, &sigr, &sigs, &pub, &msg));
 }
 
-void run_ecdsa_sign_verify(void) {
+void run_ecdsa_sign_verify(void)
+{
     int i;
-    for (i = 0; i < 10*count; i++) {
+    for (i = 0; i < 10 * count; i++) {
         test_ecdsa_sign_verify();
     }
 }
 
 /** Dummy nonce generation function that just uses a precomputed nonce, and fails if it is not accepted. Use only for testing. */
-static int precomputed_nonce_function(unsigned char *nonce32, const unsigned char *msg32, const unsigned char *key32, const unsigned char *algo16, void *data, unsigned int counter) {
+static int precomputed_nonce_function(unsigned char *nonce32, const unsigned char *msg32, const unsigned char *key32, const unsigned char *algo16, void *data, unsigned int counter)
+{
     (void)msg32;
     (void)key32;
     (void)algo16;
@@ -3937,50 +5144,53 @@ static int precomputed_nonce_function(unsigned char *nonce32, const unsigned cha
     return (counter == 0);
 }
 
-static int nonce_function_test_fail(unsigned char *nonce32, const unsigned char *msg32, const unsigned char *key32, const unsigned char *algo16, void *data, unsigned int counter) {
-   /* Dummy nonce generator that has a fatal error on the first counter value. */
-   if (counter == 0) {
-       return 0;
-   }
-   return nonce_function_rfc6979(nonce32, msg32, key32, algo16, data, counter - 1);
+static int nonce_function_test_fail(unsigned char *nonce32, const unsigned char *msg32, const unsigned char *key32, const unsigned char *algo16, void *data, unsigned int counter)
+{
+    /* Dummy nonce generator that has a fatal error on the first counter value. */
+    if (counter == 0) {
+        return 0;
+    }
+    return nonce_function_rfc6979(nonce32, msg32, key32, algo16, data, counter - 1);
 }
 
-static int nonce_function_test_retry(unsigned char *nonce32, const unsigned char *msg32, const unsigned char *key32, const unsigned char *algo16, void *data, unsigned int counter) {
-   /* Dummy nonce generator that produces unacceptable nonces for the first several counter values. */
-   if (counter < 3) {
-       memset(nonce32, counter==0 ? 0 : 255, 32);
-       if (counter == 2) {
-           nonce32[31]--;
-       }
-       return 1;
-   }
-   if (counter < 5) {
-       static const unsigned char order[] = {
-           0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
-           0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFE,
-           0xBA,0xAE,0xDC,0xE6,0xAF,0x48,0xA0,0x3B,
-           0xBF,0xD2,0x5E,0x8C,0xD0,0x36,0x41,0x41
-       };
-       memcpy(nonce32, order, 32);
-       if (counter == 4) {
-           nonce32[31]++;
-       }
-       return 1;
-   }
-   /* Retry rate of 6979 is negligible esp. as we only call this in deterministic tests. */
-   /* If someone does fine a case where it retries for secp256k1, we'd like to know. */
-   if (counter > 5) {
-       return 0;
-   }
-   return nonce_function_rfc6979(nonce32, msg32, key32, algo16, data, counter - 5);
+static int nonce_function_test_retry(unsigned char *nonce32, const unsigned char *msg32, const unsigned char *key32, const unsigned char *algo16, void *data, unsigned int counter)
+{
+    /* Dummy nonce generator that produces unacceptable nonces for the first several counter values. */
+    if (counter < 3) {
+        memset(nonce32, counter == 0 ? 0 : 255, 32);
+        if (counter == 2) {
+            nonce32[31]--;
+        }
+        return 1;
+    }
+    if (counter < 5) {
+        static const unsigned char order[] = {
+            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFE,
+            0xBA, 0xAE, 0xDC, 0xE6, 0xAF, 0x48, 0xA0, 0x3B,
+            0xBF, 0xD2, 0x5E, 0x8C, 0xD0, 0x36, 0x41, 0x41};
+        memcpy(nonce32, order, 32);
+        if (counter == 4) {
+            nonce32[31]++;
+        }
+        return 1;
+    }
+    /* Retry rate of 6979 is negligible esp. as we only call this in deterministic tests. */
+    /* If someone does fine a case where it retries for secp256k1, we'd like to know. */
+    if (counter > 5) {
+        return 0;
+    }
+    return nonce_function_rfc6979(nonce32, msg32, key32, algo16, data, counter - 5);
 }
 
-int is_empty_signature(const secp256k1_ecdsa_signature *sig) {
+int is_empty_signature(const secp256k1_ecdsa_signature *sig)
+{
     static const unsigned char res[sizeof(secp256k1_ecdsa_signature)] = {0};
     return memcmp(sig, res, sizeof(secp256k1_ecdsa_signature)) == 0;
 }
 
-void test_ecdsa_end_to_end(void) {
+void test_ecdsa_end_to_end(void)
+{
     unsigned char extra[32] = {0x00};
     unsigned char privkey[32];
     unsigned char message[32];
@@ -4111,7 +5321,8 @@ void test_ecdsa_end_to_end(void) {
           secp256k1_ecdsa_verify(ctx, &signature[0], message, &pubkey) == 0);
 }
 
-void test_random_pubkeys(void) {
+void test_random_pubkeys(void)
+{
     secp256k1_ge elem;
     secp256k1_ge elem2;
     unsigned char in[65];
@@ -4121,9 +5332,9 @@ void test_random_pubkeys(void) {
         len = secp256k1_rand_bits(6);
     }
     if (len == 65) {
-      in[0] = secp256k1_rand_bits(1) ? 4 : (secp256k1_rand_bits(1) ? 6 : 7);
+        in[0] = secp256k1_rand_bits(1) ? 4 : (secp256k1_rand_bits(1) ? 6 : 7);
     } else {
-      in[0] = secp256k1_rand_bits(1) ? 2 : 3;
+        in[0] = secp256k1_rand_bits(1) ? 2 : 3;
     }
     if (secp256k1_rand_bits(3) == 0) {
         in[0] = secp256k1_rand_bits(8);
@@ -4143,7 +5354,7 @@ void test_random_pubkeys(void) {
         /* If the pubkey can be parsed, it should round-trip... */
         CHECK(secp256k1_eckey_pubkey_serialize(&elem, out, &size, len == 33));
         CHECK(size == len);
-        CHECK(memcmp(&in[1], &out[1], len-1) == 0);
+        CHECK(memcmp(&in[1], &out[1], len - 1) == 0);
         /* ... except for the type of hybrid inputs. */
         if ((in[0] != 6) && (in[0] != 7)) {
             CHECK(in[0] == out[0]);
@@ -4152,48 +5363,50 @@ void test_random_pubkeys(void) {
         CHECK(secp256k1_eckey_pubkey_serialize(&elem, in, &size, 0));
         CHECK(size == 65);
         CHECK(secp256k1_eckey_pubkey_parse(&elem2, in, size));
-        ge_equals_ge(&elem,&elem2);
+        ge_equals_ge(&elem, &elem2);
         /* Check that the X9.62 hybrid type is checked. */
         in[0] = secp256k1_rand_bits(1) ? 6 : 7;
         res = secp256k1_eckey_pubkey_parse(&elem2, in, size);
         if (firstb == 2 || firstb == 3) {
             if (in[0] == firstb + 4) {
-              CHECK(res);
+                CHECK(res);
             } else {
-              CHECK(!res);
+                CHECK(!res);
             }
         }
         if (res) {
-            ge_equals_ge(&elem,&elem2);
+            ge_equals_ge(&elem, &elem2);
             CHECK(secp256k1_eckey_pubkey_serialize(&elem, out, &size, 0));
             CHECK(memcmp(&in[1], &out[1], 64) == 0);
         }
     }
 }
 
-void run_random_pubkeys(void) {
+void run_random_pubkeys(void)
+{
     int i;
-    for (i = 0; i < 10*count; i++) {
+    for (i = 0; i < 10 * count; i++) {
         test_random_pubkeys();
     }
 }
 
-void run_ecdsa_end_to_end(void) {
+void run_ecdsa_end_to_end(void)
+{
     int i;
-    for (i = 0; i < 64*count; i++) {
+    for (i = 0; i < 64 * count; i++) {
         test_ecdsa_end_to_end();
     }
 }
 
-int test_ecdsa_der_parse(const unsigned char *sig, size_t siglen, int certainly_der, int certainly_not_der) {
+int test_ecdsa_der_parse(const unsigned char *sig, size_t siglen, int certainly_der, int certainly_not_der)
+{
     static const unsigned char zeroes[32] = {0};
 #ifdef ENABLE_OPENSSL_TESTS
     static const unsigned char max_scalar[32] = {
         0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
         0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe,
         0xba, 0xae, 0xdc, 0xe6, 0xaf, 0x48, 0xa0, 0x3b,
-        0xbf, 0xd2, 0x5e, 0x8c, 0xd0, 0x36, 0x41, 0x40
-    };
+        0xbf, 0xd2, 0x5e, 0x8c, 0xd0, 0x36, 0x41, 0x40};
 #endif
 
     int ret = 0;
@@ -4299,7 +5512,8 @@ int test_ecdsa_der_parse(const unsigned char *sig, size_t siglen, int certainly_
     return ret;
 }
 
-static void assign_big_endian(unsigned char *ptr, size_t ptrlen, uint32_t val) {
+static void assign_big_endian(unsigned char *ptr, size_t ptrlen, uint32_t val)
+{
     size_t i;
     for (i = 0; i < ptrlen; i++) {
         int shift = ptrlen - 1 - i;
@@ -4311,7 +5525,8 @@ static void assign_big_endian(unsigned char *ptr, size_t ptrlen, uint32_t val) {
     }
 }
 
-static void damage_array(unsigned char *sig, size_t *len) {
+static void damage_array(unsigned char *sig, size_t *len)
+{
     int pos;
     int action = secp256k1_rand_bits(3);
     if (action < 1 && *len > 3) {
@@ -4338,7 +5553,8 @@ static void damage_array(unsigned char *sig, size_t *len) {
     }
 }
 
-static void random_ber_signature(unsigned char *sig, size_t *len, int* certainly_der, int* certainly_not_der) {
+static void random_ber_signature(unsigned char *sig, size_t *len, int *certainly_der, int *certainly_not_der)
+{
     int der;
     int nlow[2], nlen[2], nlenlen[2], nhbit[2], nhbyte[2], nzlen[2];
     size_t tlen, elen, glen;
@@ -4484,8 +5700,9 @@ static void random_ber_signature(unsigned char *sig, size_t *len, int* certainly
     CHECK(tlen == *len);
 }
 
-void run_ecdsa_der_parse(void) {
-    int i,j;
+void run_ecdsa_der_parse(void)
+{
+    int i, j;
     for (i = 0; i < 200 * count; i++) {
         unsigned char buffer[2048];
         size_t buflen = 0;
@@ -4516,7 +5733,8 @@ void run_ecdsa_der_parse(void) {
 }
 
 /* Tests several edge cases. */
-void test_ecdsa_edge_cases(void) {
+void test_ecdsa_edge_cases(void)
+{
     int t;
     secp256k1_ecdsa_signature sig;
 
@@ -4543,8 +5761,7 @@ void test_ecdsa_edge_cases(void) {
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
             0xfe, 0xba, 0xae, 0xdc, 0xe6, 0xaf, 0x48, 0xa0,
             0x3b, 0xbf, 0xd2, 0x5e, 0x8c, 0xd0, 0x36, 0x41,
-            0x41
-        };
+            0x41};
         secp256k1_ge key;
         secp256k1_scalar msg;
         secp256k1_scalar sr, ss;
@@ -4562,8 +5779,7 @@ void test_ecdsa_edge_cases(void) {
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x01
-        };
+            0x01};
         secp256k1_ge key;
         secp256k1_scalar msg;
         secp256k1_scalar sr, ss;
@@ -4581,15 +5797,13 @@ void test_ecdsa_edge_cases(void) {
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x02
-        };
+            0x02};
         const unsigned char pubkey2[33] = {
             0x02, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
             0xfe, 0xba, 0xae, 0xdc, 0xe6, 0xaf, 0x48, 0xa0,
             0x3b, 0xbf, 0xd2, 0x5e, 0x8c, 0xd0, 0x36, 0x41,
-            0x43
-        };
+            0x43};
         secp256k1_ge key;
         secp256k1_ge key2;
         secp256k1_scalar msg;
@@ -4616,21 +5830,18 @@ void test_ecdsa_edge_cases(void) {
             0x6f, 0xd2, 0xe2, 0x07, 0x6a, 0x77, 0xcf, 0x05,
             0xb4, 0x1d, 0xe7, 0x4a, 0x30, 0x98, 0x27, 0x8c,
             0x93, 0xe6, 0xe6, 0x3c, 0x0b, 0xc4, 0x73, 0x76,
-            0x25
-        };
+            0x25};
         const unsigned char pubkey2[33] = {
             0x02, 0x8a, 0xd5, 0x37, 0xed, 0x73, 0xd9, 0x40,
             0x1d, 0xa0, 0x33, 0xd2, 0xdc, 0xf0, 0xaf, 0xae,
             0x34, 0xcf, 0x5f, 0x96, 0x4c, 0x73, 0x28, 0x0f,
             0x92, 0xc0, 0xf6, 0x9d, 0xd9, 0xb2, 0x09, 0x10,
-            0x62
-        };
+            0x62};
         const unsigned char csr[32] = {
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
             0x45, 0x51, 0x23, 0x19, 0x50, 0xb7, 0x5f, 0xc4,
-            0x40, 0x2d, 0xa1, 0x72, 0x2f, 0xc9, 0xba, 0xeb
-        };
+            0x40, 0x2d, 0xa1, 0x72, 0x2f, 0xc9, 0xba, 0xeb};
         secp256k1_ge key;
         secp256k1_ge key2;
         secp256k1_scalar msg;
@@ -4658,14 +5869,12 @@ void test_ecdsa_edge_cases(void) {
             0x02, 0x94, 0xbd, 0x9f, 0x4b, 0x2e, 0xd7, 0x52,
             0x28, 0xdb, 0x49, 0x2a, 0x65, 0xcb, 0x1e, 0x27,
             0x57, 0x9c, 0xba, 0x74, 0x20, 0xd5, 0x1d, 0x20,
-            0xf1
-        };
+            0xf1};
         const unsigned char csr[32] = {
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
             0x45, 0x51, 0x23, 0x19, 0x50, 0xb7, 0x5f, 0xc4,
-            0x40, 0x2d, 0xa1, 0x72, 0x2f, 0xc9, 0xba, 0xee
-        };
+            0x40, 0x2d, 0xa1, 0x72, 0x2f, 0xc9, 0xba, 0xee};
         secp256k1_ge key;
         secp256k1_scalar msg;
         secp256k1_scalar sr, ss;
@@ -4689,28 +5898,111 @@ void test_ecdsa_edge_cases(void) {
         int32_t ecount;
         unsigned char signature[72];
         static const unsigned char nonce[32] = {
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x01,
         };
         static const unsigned char nonce2[32] = {
-            0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
-            0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFE,
-            0xBA,0xAE,0xDC,0xE6,0xAF,0x48,0xA0,0x3B,
-            0xBF,0xD2,0x5E,0x8C,0xD0,0x36,0x41,0x40
-        };
+            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFE,
+            0xBA, 0xAE, 0xDC, 0xE6, 0xAF, 0x48, 0xA0, 0x3B,
+            0xBF, 0xD2, 0x5E, 0x8C, 0xD0, 0x36, 0x41, 0x40};
         const unsigned char key[32] = {
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x01,
         };
         unsigned char msg[32] = {
-            0x86, 0x41, 0x99, 0x81, 0x06, 0x23, 0x44, 0x53,
-            0xaa, 0x5f, 0x9d, 0x6a, 0x31, 0x78, 0xf4, 0xf7,
-            0xb8, 0x12, 0xe0, 0x0b, 0x81, 0x7a, 0x77, 0x62,
-            0x65, 0xdf, 0xdd, 0x31, 0xb9, 0x3e, 0x29, 0xa9,
+            0x86,
+            0x41,
+            0x99,
+            0x81,
+            0x06,
+            0x23,
+            0x44,
+            0x53,
+            0xaa,
+            0x5f,
+            0x9d,
+            0x6a,
+            0x31,
+            0x78,
+            0xf4,
+            0xf7,
+            0xb8,
+            0x12,
+            0xe0,
+            0x0b,
+            0x81,
+            0x7a,
+            0x77,
+            0x62,
+            0x65,
+            0xdf,
+            0xdd,
+            0x31,
+            0xb9,
+            0x3e,
+            0x29,
+            0xa9,
         };
         ecount = 0;
         secp256k1_context_set_illegal_callback(ctx, counting_illegal_callback_fn, &ecount);
@@ -4815,7 +6107,7 @@ void test_ecdsa_edge_cases(void) {
         CHECK(!is_empty_signature(&sig2));
         CHECK(memcmp(&sig, &sig2, sizeof(sig)) == 0);
         /* The default nonce function changes output with different messages. */
-        for(i = 0; i < 256; i++) {
+        for (i = 0; i < 256; i++) {
             int j;
             msg[0] = i;
             CHECK(secp256k1_ecdsa_sign(ctx, &sig2, msg, key, NULL, extra) == 1);
@@ -4828,7 +6120,7 @@ void test_ecdsa_edge_cases(void) {
         msg[0] = 0;
         msg[31] = 2;
         /* The default nonce function changes output with different keys. */
-        for(i = 256; i < 512; i++) {
+        for (i = 256; i < 512; i++) {
             int j;
             key[0] = i - 256;
             CHECK(secp256k1_ecdsa_sign(ctx, &sig2, msg, key, NULL, extra) == 1);
@@ -4848,18 +6140,18 @@ void test_ecdsa_edge_cases(void) {
         unsigned char nonce2[32];
         unsigned char nonce3[32];
         unsigned char nonce4[32];
-        VG_UNDEF(nonce,32);
-        VG_UNDEF(nonce2,32);
-        VG_UNDEF(nonce3,32);
-        VG_UNDEF(nonce4,32);
+        VG_UNDEF(nonce, 32);
+        VG_UNDEF(nonce2, 32);
+        VG_UNDEF(nonce3, 32);
+        VG_UNDEF(nonce4, 32);
         CHECK(nonce_function_rfc6979(nonce, zeros, zeros, NULL, NULL, 0) == 1);
-        VG_CHECK(nonce,32);
+        VG_CHECK(nonce, 32);
         CHECK(nonce_function_rfc6979(nonce2, zeros, zeros, zeros, NULL, 0) == 1);
-        VG_CHECK(nonce2,32);
+        VG_CHECK(nonce2, 32);
         CHECK(nonce_function_rfc6979(nonce3, zeros, zeros, NULL, (void *)zeros, 0) == 1);
-        VG_CHECK(nonce3,32);
+        VG_CHECK(nonce3, 32);
         CHECK(nonce_function_rfc6979(nonce4, zeros, zeros, zeros, (void *)zeros, 0) == 1);
-        VG_CHECK(nonce4,32);
+        VG_CHECK(nonce4, 32);
         CHECK(memcmp(nonce, nonce2, 32) != 0);
         CHECK(memcmp(nonce, nonce3, 32) != 0);
         CHECK(memcmp(nonce, nonce4, 32) != 0);
@@ -4868,15 +6160,42 @@ void test_ecdsa_edge_cases(void) {
         CHECK(memcmp(nonce3, nonce4, 32) != 0);
     }
 
-
     /* Privkey export where pubkey is the point at infinity. */
     {
         unsigned char privkey[300];
         unsigned char seckey[32] = {
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe,
-            0xba, 0xae, 0xdc, 0xe6, 0xaf, 0x48, 0xa0, 0x3b,
-            0xbf, 0xd2, 0x5e, 0x8c, 0xd0, 0x36, 0x41, 0x41,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xfe,
+            0xba,
+            0xae,
+            0xdc,
+            0xe6,
+            0xaf,
+            0x48,
+            0xa0,
+            0x3b,
+            0xbf,
+            0xd2,
+            0x5e,
+            0x8c,
+            0xd0,
+            0x36,
+            0x41,
+            0x41,
         };
         size_t outlen = 300;
         CHECK(!ec_privkey_export_der(ctx, privkey, &outlen, seckey, 0));
@@ -4885,15 +6204,17 @@ void test_ecdsa_edge_cases(void) {
     }
 }
 
-void run_ecdsa_edge_cases(void) {
+void run_ecdsa_edge_cases(void)
+{
     test_ecdsa_edge_cases();
 }
 
 #ifdef ENABLE_OPENSSL_TESTS
-EC_KEY *get_openssl_key(const unsigned char *key32) {
+EC_KEY *get_openssl_key(const unsigned char *key32)
+{
     unsigned char privkey[300];
     size_t privkeylen;
-    const unsigned char* pbegin = privkey;
+    const unsigned char *pbegin = privkey;
     int compr = secp256k1_rand_bits(1);
     EC_KEY *ec_key = EC_KEY_new_by_curve_name(NID_secp256k1);
     CHECK(ec_privkey_export_der(ctx, privkey, &privkeylen, key32, compr));
@@ -4902,7 +6223,8 @@ EC_KEY *get_openssl_key(const unsigned char *key32) {
     return ec_key;
 }
 
-void test_ecdsa_openssl(void) {
+void test_ecdsa_openssl(void)
+{
     secp256k1_gej qj;
     secp256k1_ge q;
     secp256k1_scalar sigr, sigs;
@@ -4937,23 +6259,25 @@ void test_ecdsa_openssl(void) {
     EC_KEY_free(ec_key);
 }
 
-void run_ecdsa_openssl(void) {
+void run_ecdsa_openssl(void)
+{
     int i;
-    for (i = 0; i < 10*count; i++) {
+    for (i = 0; i < 10 * count; i++) {
         test_ecdsa_openssl();
     }
 }
 #endif
 
 #ifdef ENABLE_MODULE_ECDH
-# include "modules/ecdh/tests_impl.h"
+#include "modules/ecdh/tests_impl.h"
 #endif
 
 #ifdef ENABLE_MODULE_RECOVERY
-# include "modules/recovery/tests_impl.h"
+#include "modules/recovery/tests_impl.h"
 #endif
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv)
+{
     unsigned char seed16[16] = {0};
     unsigned char run32[32] = {0};
     /* find iteration count */
@@ -4964,7 +6288,7 @@ int main(int argc, char **argv) {
     /* find random seed */
     if (argc > 2) {
         int pos = 0;
-        const char* ch = argv[2];
+        const char *ch = argv[2];
         while (pos < 16 && ch[0] != 0 && ch[1] != 0) {
             unsigned short sh;
             if (sscanf(ch, "%2hx", &sh)) {

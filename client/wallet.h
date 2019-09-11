@@ -6,14 +6,14 @@
 #include "block.h"
 
 struct xdag_public_key {
-	void *key;
-	uint64_t *pub; /* lowest bit contains parity */
+    void *key;      // key内部指针
+    uint64_t *pub; /* lowest bit contains parity, pubkey原始数据的指针，但是最低1位放上了奇偶标记 */ 
 };
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-	
+
 /* initializes a wallet */
 extern int xdag_wallet_init(void);
 
@@ -32,5 +32,5 @@ extern void xdag_wallet_finish(void);
 #ifdef __cplusplus
 };
 #endif
-		
+
 #endif

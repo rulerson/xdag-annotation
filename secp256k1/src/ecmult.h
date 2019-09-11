@@ -14,7 +14,7 @@
 
 typedef struct {
     /* For accelerating the computation of a*P + b*G: */
-    secp256k1_ge_storage (*pre_g)[];    /* odd multiples of the generator */
+    secp256k1_ge_storage (*pre_g)[]; /* odd multiples of the generator */
 #ifdef USE_ENDOMORPHISM
     secp256k1_ge_storage (*pre_g_128)[]; /* odd multiples of 2^128*generator */
 #endif
@@ -30,7 +30,7 @@ static int secp256k1_ecmult_context_is_built(const secp256k1_ecmult_context *ctx
 /** Double multiply: R = na*A + ng*G */
 static void secp256k1_ecmult(const secp256k1_ecmult_context *ctx, secp256k1_gej *r, const secp256k1_gej *a, const secp256k1_scalar *na, const secp256k1_scalar *ng);
 
-typedef int (secp256k1_ecmult_multi_callback)(secp256k1_scalar *sc, secp256k1_ge *pt, size_t idx, void *data);
+typedef int(secp256k1_ecmult_multi_callback)(secp256k1_scalar *sc, secp256k1_ge *pt, size_t idx, void *data);
 
 /**
  * Multi-multiply: R = inp_g_sc * G + sum_i ni * Ai.

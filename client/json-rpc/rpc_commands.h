@@ -15,20 +15,20 @@
 extern "C" {
 #endif
 
-	struct sockaddr_in;
+struct sockaddr_in;
 
-	/* rpc commands */
-	extern int xdag_rpc_command(const char *, FILE *);
+/* rpc commands */
+extern int xdag_rpc_command(const char *, FILE *);
 
-	extern int xdag_rpc_command_host_check(struct sockaddr_in);
-	extern int xdag_rpc_command_host_add(const char *);
-	extern int xdag_rpc_command_host_del(const char *);
-	extern void xdag_rpc_command_host_clear(void);
-	extern void xdag_rpc_command_host_query(char *);
-	extern void xdag_rpc_command_list_methods(char *);
-	extern void xdag_rpc_command_disable_xfer(void);
-	extern void xdag_rpc_command_enable_xfer(void);
-	extern void xdag_rpc_command_help(FILE *);
+extern int xdag_rpc_command_host_check(struct sockaddr_in);
+extern int xdag_rpc_command_host_add(const char *);
+extern int xdag_rpc_command_host_del(const char *);
+extern void xdag_rpc_command_host_clear(void);
+extern void xdag_rpc_command_host_query(char *);
+extern void xdag_rpc_command_list_methods(char *);
+extern void xdag_rpc_command_disable_xfer(void);
+extern void xdag_rpc_command_enable_xfer(void);
+extern void xdag_rpc_command_help(FILE *);
 
 #ifdef __cplusplus
 };

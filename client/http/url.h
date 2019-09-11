@@ -17,29 +17,27 @@
  *   - username and password must be paired.
  */
 
-typedef enum
-{
-	HOST_IPV4,
-	HOST_IPV6,
-	HOST_DOMAIN
+typedef enum {
+    HOST_IPV4,
+    HOST_IPV6,
+    HOST_DOMAIN
 } host_type_t;
 
-typedef struct _url_field
-{
-	host_type_t host_type;
-	char *href;
-	char *schema;
-	char *username;
-	char *password;
-	char *host;
-	char *port;
-	char *path;
-	int query_num;
-	struct {
-		char *name;
-		char *value;
-	} *query;
-	char *fragment;
+typedef struct _url_field {
+    host_type_t host_type;
+    char *href;
+    char *schema;
+    char *username;
+    char *password;
+    char *host;
+    char *port;
+    char *path;
+    int query_num;
+    struct {
+        char *name;
+        char *value;
+    } * query;
+    char *fragment;
 } url_field_t;
 
 #ifdef __cplusplus
@@ -55,5 +53,5 @@ extern void url_field_print(url_field_t *url);
 #ifdef __cplusplus
 };
 #endif
-	
+
 #endif /* !__URI_H__ */

@@ -9,19 +9,19 @@
 #include <poll.h>
 #endif
 
-#define DATA_SIZE          (sizeof(struct xdag_field) / sizeof(uint32_t))
-#define BLOCK_HEADER_WORD  0x3fca9e2bu
+#define DATA_SIZE (sizeof(struct xdag_field) / sizeof(uint32_t))
+#define BLOCK_HEADER_WORD 0x3fca9e2bu
 
 struct xdag_pool_task {
-	struct xdag_field task[2], lastfield, minhash, nonce;
-	xtime_t task_time;
-	void *ctx0, *ctx;
+    struct xdag_field task[2], lastfield, minhash, nonce;
+    xtime_t task_time;
+    void *ctx0, *ctx;
 };
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-	
+
 extern struct xdag_pool_task g_xdag_pool_task[2];
 extern uint64_t g_xdag_pool_task_index; /* global variables are instantiated with 0 */
 
@@ -47,5 +47,5 @@ extern void xdag_set_min_share(struct xdag_pool_task *task, xdag_hash_t last, xd
 #ifdef __cplusplus
 };
 #endif
-		
+
 #endif

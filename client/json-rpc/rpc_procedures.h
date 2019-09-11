@@ -12,12 +12,12 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-	
+
 /* init rpc procedures */
 extern int xdag_rpc_init_procedures(void);
 
 #ifdef __cplusplus
 };
 #endif
-		
+
 #endif //XDAG_TERMINAL_H
