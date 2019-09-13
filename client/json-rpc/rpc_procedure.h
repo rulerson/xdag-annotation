@@ -13,19 +13,19 @@
 #include "cJSON_Utils.h"
 #include "rpc_procedures.h"
 
-struct xdag_rpc_context{
-	void *data;
-	int error_code;
-	char * error_message;
-	char rpc_version[8];
-} ;
+struct xdag_rpc_context {
+    void *data;
+    int error_code;
+    char *error_message;
+    char rpc_version[8];
+};
 
-typedef cJSON* (*xdag_rpc_function)(struct xdag_rpc_context *context, cJSON *params, cJSON *id, char *version);
+typedef cJSON *(*xdag_rpc_function)(struct xdag_rpc_context *context, cJSON *params, cJSON *id, char *version);
 
 struct xdag_rpc_procedure {
-	char * name;
-	xdag_rpc_function function;
-	void *data;
+    char *name;
+    xdag_rpc_function function;
+    void *data;
 };
 
 #ifdef __cplusplus
@@ -44,10 +44,10 @@ extern int xdag_rpc_service_list_procedures(char *);
 extern int xdag_rpc_service_clear_procedures(void);
 
 /* handle rpc request */
-extern cJSON *xdag_rpc_handle_request(char* buffer);
+extern cJSON *xdag_rpc_handle_request(char *buffer);
 
 #ifdef __cplusplus
 };
 #endif
-		
+
 #endif //XDAG_RPC_PROCEDURE_H

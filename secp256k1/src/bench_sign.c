@@ -9,14 +9,15 @@
 #include "bench.h"
 
 typedef struct {
-    secp256k1_context* ctx;
+    secp256k1_context *ctx;
     unsigned char msg[32];
     unsigned char key[32];
 } bench_sign;
 
-static void bench_sign_setup(void* arg) {
+static void bench_sign_setup(void *arg)
+{
     int i;
-    bench_sign *data = (bench_sign*)arg;
+    bench_sign *data = (bench_sign *)arg;
 
     for (i = 0; i < 32; i++) {
         data->msg[i] = i + 1;
@@ -26,9 +27,10 @@ static void bench_sign_setup(void* arg) {
     }
 }
 
-static void bench_sign_run(void* arg) {
+static void bench_sign_run(void *arg)
+{
     int i;
-    bench_sign *data = (bench_sign*)arg;
+    bench_sign *data = (bench_sign *)arg;
 
     unsigned char sig[74];
     for (i = 0; i < 20000; i++) {
@@ -44,7 +46,8 @@ static void bench_sign_run(void* arg) {
     }
 }
 
-int main(void) {
+int main(void)
+{
     bench_sign data;
 
     data.ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN);

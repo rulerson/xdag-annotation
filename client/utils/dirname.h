@@ -4,9 +4,9 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-	
+
 char *posix_dirname(const char *path);
-	
+
 #ifdef __cplusplus
 };
 #endif

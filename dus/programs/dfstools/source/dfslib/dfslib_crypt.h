@@ -9,9 +9,9 @@
 #define DFSLIB_CRYPT_PWDLEN 4
 
 struct dfslib_crypt {
-	dfs32	regs[0x10000];
-	dfs32	pwd[DFSLIB_CRYPT_PWDLEN];
-	dfs32	ispwd;
+    dfs32 regs[0x10000];
+    dfs32 pwd[DFSLIB_CRYPT_PWDLEN];
+    dfs32 ispwd;
 };
 #ifdef __cplusplus
 extern "C" {

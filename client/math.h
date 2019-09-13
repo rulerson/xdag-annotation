@@ -9,7 +9,7 @@
 #include "hash.h"
 
 #define xdag_amount2xdag(amount) ((unsigned)((amount) >> 32))
-#define xdag_amount2cheato(amount) ((unsigned)(((uint64_t)(unsigned)(amount) * 1000000000) >> 32))
+#define xdag_amount2cheato(amount) ((unsigned)(((uint64_t)(unsigned)(amount)*1000000000) >> 32))
 
 #ifdef __cplusplus
 extern "C" {
@@ -19,7 +19,7 @@ extern "C" {
 extern long double amount2xdags(xdag_amount_t);
 
 // convert xdag to cheato
-extern xdag_amount_t xdags2amount(const char*);
+extern xdag_amount_t xdags2amount(const char *);
 
 // calculate difficulty from hash
 xdag_diff_t xdag_hash_difficulty(xdag_hash_t);
@@ -33,7 +33,7 @@ long double xdag_log_difficulty2hashrate(long double);
 // calculates hashrate from last HASHRATE_LAST_MAX_TIME recorded difficulties
 // diff is actually a pointer to a xdag_diff_t array with HASHRATE_LAST_MAX_TIME elements
 long double xdag_hashrate(xdag_diff_t *diff);
-	
+
 #ifdef __cplusplus
 };
 #endif

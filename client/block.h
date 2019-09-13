@@ -11,43 +11,43 @@
 #include "types.h"
 
 enum xdag_field_type {
-	XDAG_FIELD_NONCE,        //0
-	XDAG_FIELD_HEAD,         //1
-	XDAG_FIELD_IN,           //2
-	XDAG_FIELD_OUT,          //3
-	XDAG_FIELD_SIGN_IN,      //4
-	XDAG_FIELD_SIGN_OUT,     //5
-	XDAG_FIELD_PUBLIC_KEY_0, //6
-	XDAG_FIELD_PUBLIC_KEY_1, //7
-	XDAG_FIELD_HEAD_TEST,    //8
-	XDAG_FIELD_REMARK,       //9
-	XDAG_FIELD_RESERVE1,     //A
-	XDAG_FIELD_RESERVE2,     //B
-	XDAG_FIELD_RESERVE3,     //C
-	XDAG_FIELD_RESERVE4,     //D
-	XDAG_FIELD_RESERVE5,     //E
-	XDAG_FIELD_RESERVE6      //F
+    XDAG_FIELD_NONCE,        //0
+    XDAG_FIELD_HEAD,         //1
+    XDAG_FIELD_IN,           //2
+    XDAG_FIELD_OUT,          //3
+    XDAG_FIELD_SIGN_IN,      //4
+    XDAG_FIELD_SIGN_OUT,     //5
+    XDAG_FIELD_PUBLIC_KEY_0, //6
+    XDAG_FIELD_PUBLIC_KEY_1, //7
+    XDAG_FIELD_HEAD_TEST,    //8
+    XDAG_FIELD_REMARK,       //9
+    XDAG_FIELD_RESERVE1,     //A
+    XDAG_FIELD_RESERVE2,     //B
+    XDAG_FIELD_RESERVE3,     //C
+    XDAG_FIELD_RESERVE4,     //D
+    XDAG_FIELD_RESERVE5,     //E
+    XDAG_FIELD_RESERVE6      //F
 };
 
 enum xdag_message_type {
-	XDAG_MESSAGE_BLOCKS_REQUEST,
-	XDAG_MESSAGE_BLOCKS_REPLY,
-	XDAG_MESSAGE_SUMS_REQUEST,
-	XDAG_MESSAGE_SUMS_REPLY,
-	XDAG_MESSAGE_BLOCKEXT_REQUEST,
-	XDAG_MESSAGE_BLOCKEXT_REPLY,
-	XDAG_MESSAGE_BLOCK_REQUEST,
+    XDAG_MESSAGE_BLOCKS_REQUEST,
+    XDAG_MESSAGE_BLOCKS_REPLY,
+    XDAG_MESSAGE_SUMS_REQUEST,
+    XDAG_MESSAGE_SUMS_REPLY,
+    XDAG_MESSAGE_BLOCKEXT_REQUEST,
+    XDAG_MESSAGE_BLOCKEXT_REPLY,
+    XDAG_MESSAGE_BLOCK_REQUEST,
 };
 
 enum bi_flags {
-	BI_MAIN       = 0x01,
-	BI_MAIN_CHAIN = 0x02,
-	BI_APPLIED    = 0x04,
-	BI_MAIN_REF   = 0x08,
-	BI_REF        = 0x10,
-	BI_OURS       = 0x20,
-	BI_EXTRA      = 0x40,
-	BI_REMARK     = 0x80
+    BI_MAIN = 0x01,             // 主块
+    BI_MAIN_CHAIN = 0x02,       // 主链
+    BI_APPLIED = 0x04,          // 已正确计算了金额数据
+    BI_MAIN_REF = 0x08,         // 被主链引用了
+    BI_REF = 0x10,
+    BI_OURS = 0x20,             // 属于自己的block
+    BI_EXTRA = 0x40,
+    BI_REMARK = 0x80
 };
 
 #define XDAG_BLOCK_FIELDS 16
@@ -61,28 +61,28 @@ enum bi_flags {
 typedef uint8_t xdag_remark_t[32];
 
 struct xdag_field {
-	union {
-		struct {
-			union {
-				struct {
-					uint64_t transport_header;
-					uint64_t type;
-					xtime_t time;
-				};
-				xdag_hashlow_t hash;
-			};
-			union {
-				xdag_amount_t amount;
-				xtime_t end_time;
-			};
-		};
-		xdag_hash_t data;
-		xdag_remark_t remark;
-	};
+    union {
+        struct {
+            union {
+                struct {
+                    uint64_t transport_header; // 这个字段是留给dnet层去填充的, == dnet_packet.header
+                    uint64_t type;
+                    xtime_t time;
+                };
+                xdag_hashlow_t hash;
+            };
+            union {
+                xdag_amount_t amount;
+                xtime_t end_time;
+            };
+        };
+        xdag_hash_t data;
+        xdag_remark_t remark;
+    };
 };
 
 struct xdag_block {
-	struct xdag_field field[XDAG_BLOCK_FIELDS];
+    struct xdag_field field[XDAG_BLOCK_FIELDS];
 };
 
 #define xdag_type(b, n) ((b)->field[0].type >> ((n) << 2) & 0xf)
@@ -104,19 +104,19 @@ extern int xdag_get_our_block(xdag_hash_t hash);
 
 // calls callback for each own block
 extern int xdag_traverse_our_blocks(void *data,
-	int (*callback)(void*, xdag_hash_t, xdag_amount_t, xtime_t, int));
+                                    int (*callback)(void *, xdag_hash_t, xdag_amount_t, xtime_t, int));
 
 // calls callback for each block
 extern int xdag_traverse_all_blocks(void *data, int (*callback)(void *data, xdag_hash_t hash,
-	xdag_amount_t amount, xtime_t time));
+                                                                xdag_amount_t amount, xtime_t time));
 
 // create a new block
-extern struct xdag_block* xdag_create_block(struct xdag_field *fields, int inputsCount, int outputsCount, int hasRemark, 
-	xdag_amount_t fee, xtime_t send_time, xdag_hash_t block_hash_result);
+extern struct xdag_block *xdag_create_block(struct xdag_field *fields, int inputsCount, int outputsCount, int hasRemark,
+                                            xdag_amount_t fee, xtime_t send_time, xdag_hash_t block_hash_result);
 
 // create and publish a block
-extern int xdag_create_and_send_block(struct xdag_field *fields, int inputsCount, int outputsCount, int hasRemark, 
-	xdag_amount_t fee, xtime_t send_time, xdag_hash_t block_hash_result);
+extern int xdag_create_and_send_block(struct xdag_field *fields, int inputsCount, int outputsCount, int hasRemark,
+                                      xdag_amount_t fee, xtime_t send_time, xdag_hash_t block_hash_result);
 
 // returns current balance for specified address or balance for all addresses if hash == 0
 extern xdag_amount_t xdag_get_balance(xdag_hash_t hash);
@@ -131,7 +131,7 @@ extern xdag_amount_t xdag_get_supply(uint64_t nmain);
 extern int64_t xdag_get_block_pos(const xdag_hash_t hash, xtime_t *time, struct xdag_block *block);
 
 // return state info string
-extern const char* xdag_get_block_state_info(uint8_t flag);
+extern const char *xdag_get_block_state_info(uint8_t flag);
 
 // returns a number of the current period, period is 64 seconds
 extern xtime_t xdag_main_time(void);
@@ -155,17 +155,17 @@ extern void xdag_list_main_blocks(int count, int print_only_addresses, FILE *out
 extern void xdag_list_mined_blocks(int count, int include_non_payed, FILE *out);
 
 // get all transactions of specified address, and return total number of transactions
-extern int xdag_get_transactions(xdag_hash_t hash, void *data, int (*callback)(void*, int, int, xdag_hash_t, xdag_amount_t, xtime_t, const char*));
+extern int xdag_get_transactions(xdag_hash_t hash, void *data, int (*callback)(void *, int, int, xdag_hash_t, xdag_amount_t, xtime_t, const char *));
 
 // print orphan blocks
-void xdag_list_orphan_blocks(int, FILE*);
+void xdag_list_orphan_blocks(int, FILE *);
 
 // completes work with the blocks
 void xdag_block_finish(void);
-	
+
 // get block info of specified address
-extern int xdag_get_block_info(xdag_hash_t, void *, int (*)(void*, int, xdag_hash_t, xdag_amount_t, xtime_t, const char*),
-							void *, int (*)(void*, const char *, xdag_hash_t, xdag_amount_t));
+extern int xdag_get_block_info(xdag_hash_t, void *, int (*)(void *, int, xdag_hash_t, xdag_amount_t, xtime_t, const char *),
+                               void *, int (*)(void *, const char *, xdag_hash_t, xdag_amount_t));
 
 #ifdef __cplusplus
 };

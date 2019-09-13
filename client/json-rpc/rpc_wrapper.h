@@ -12,11 +12,11 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-	
+
 extern void rpc_call_dnet_command(const char *method, const char *params, char **result);
-	
+
 #ifdef __cplusplus
 };
 #endif
-		
+
 #endif //XDAG_RPC_WRAPPER_H

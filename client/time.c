@@ -11,59 +11,62 @@ extern int g_xdag_testnet;
 // returns a time period index, where a period is 64 seconds long
 xtime_t xdag_main_time(void)
 {
-	return MAIN_TIME(xdag_get_xtimestamp());
+    return MAIN_TIME(xdag_get_xtimestamp());
 }
 
 // returns the time period index corresponding to the start of the network
 xtime_t xdag_start_main_time(void)
 {
-	return MAIN_TIME(XDAG_ERA);
+    return MAIN_TIME(XDAG_ERA);
 }
 
 int xdag_time_init(void)
 {
-	if (g_xdag_testnet) {
-		g_xdag_era = XDAG_TEST_ERA;
-	}
-	
-	return 1;
+    if (g_xdag_testnet) {
+        g_xdag_era = XDAG_TEST_ERA;
+    }
+
+    return 1;
 }
 
 // convert xtime_t to string representation
 // minimal length of string buffer `buf` should be 60
 void xdag_xtime_to_string(xtime_t time, char *buf)
 {
-	struct tm tm;
-	char tmp[64] = {0};
-	time_t t = time >> 10;
-	localtime_r(&t, &tm);
-	strftime(tmp, 60, "%Y-%m-%d %H:%M:%S", &tm);
-	sprintf(buf, "%s.%03d", tmp, (int)((time & 0x3ff) * 1000) >> 10);
+    struct tm tm;
+    char tmp[64] = {0};
+    time_t t = time >> 10;
+    localtime_r(&t, &tm);
+    strftime(tmp, 60, "%Y-%m-%d %H:%M:%S", &tm);
+    sprintf(buf, "%s.%03d", tmp, (int)((time & 0x3ff) * 1000) >> 10);
 }
 
 // convert time to string representation
 // minimal length of string buffer `buf` should be 50
-void xdag_time_to_string(time_t time, char* buf)
+void xdag_time_to_string(time_t time, char *buf)
 {
-	struct tm tm;
-	localtime_r(&time, &tm);
-	strftime(buf, 50, "%Y-%m-%d %H:%M:%S", &tm);
+    struct tm tm;
+    localtime_r(&time, &tm);
+    strftime(buf, 50, "%Y-%m-%d %H:%M:%S", &tm);
 }
 
+/*
+ 时间戳格式：8字节整数、基本单位为1/1024秒，低10位是秒的小数部分，前面是秒。
+ */
 xtime_t xdag_get_xtimestamp(void)
 {
-	struct timeval tp;
+    struct timeval tp;
 
-	gettimeofday(&tp, 0);
+    gettimeofday(&tp, 0);
 
-	return (uint64_t)(unsigned long)tp.tv_sec << 10 | ((tp.tv_usec << 10) / 1000000);
+    return (uint64_t)(unsigned long)tp.tv_sec << 10 | ((tp.tv_usec << 10) / 1000000);
 }
 
 uint64_t xdag_get_time_ms(void)
 {
-	struct timeval tp;
+    struct timeval tp;
 
-	gettimeofday(&tp, 0);
+    gettimeofday(&tp, 0);
 
-	return (uint64_t)(unsigned long)tp.tv_sec * 1000 + tp.tv_usec / 1000;
+    return (uint64_t)(unsigned long)tp.tv_sec * 1000 + tp.tv_usec / 1000;
 }
